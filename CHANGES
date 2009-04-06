@@ -1,3 +1,14 @@
+1.0.3
+
+    - The various let forms now create new frames.  This fixes
+    behavior for situations where the initializers for the bound
+    variables return multiple times due to captured continuations.
+
+    - Change define-syntax to return the unspecified value.
+
+    - Fix (lambda <var> ...) forms where <var> is env-tagged by
+    macro expansion.
+
 1.0.2
 
     - Try to find a smaller invariant precision when converting from
