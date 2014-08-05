@@ -248,24 +248,27 @@ let rec stage th cc =
   (*                 else th.th_frame) *)
   (*     in *)
   (*       cc (Sproc (p, nd)) *)
-  (* | Cqqp (h, t) -> *)
-  (*     begin *)
-  (*       match h with *)
-  (*         Cqqspl x -> *)
-  (*           eval th (fun usl -> eval th (fun t -> *)
-  (*             let rec findtl = *)
-  (*               function *)
-  (*                 Spair ({ car = _; cdr = Snull } as p) -> *)
-  (*                   p.cdr <- t; usl *)
-  (*               | Spair { car = _; cdr = nt } -> findtl nt *)
-  (*               | Snull -> t *)
-  (*               | _ -> raise (Error "unquote-splicing: not a list") *)
-  (*             in *)
-  (*                 cc (findtl usl)) t) x *)
-  (*       | _ -> *)
-  (*           eval th (fun h -> eval th (fun t -> *)
-  (*             cc (Spair { car = h; cdr = t })) t) h *)
-  (*     end *)
+  | Cqqp (h, t) ->
+      begin
+        match h with
+          Cqqspl x ->
+            stage th (fun usl -> stage th (fun t ->
+                let findtl usl t =
+                  let rec loop =
+                    function
+                      Spair ({ car = _; cdr = Snull } as p) ->
+                        p.cdr <- t; usl
+                    | Spair { car = _; cdr = nt } -> loop nt
+                    | Snull -> t
+                    | _ -> raise (Error "unquote-splicing: not a list")
+                  in
+                    loop usl
+                in
+                  cc .< findtl .~usl .~t >.) t) x
+        | _ ->
+            stage th (fun h -> stage th (fun t ->
+              cc .< Spair { car = .~h; cdr = .~t } >.) t) h
+      end
   (* | Cqqv v -> *)
   (*     let n = Array.length v in *)
   (*     let qv = Array.make n Snull in *)
@@ -288,7 +291,7 @@ let rec stage th cc =
   (*       in *)
   (*         loop [] (List.rev l) *)
   (*     end *)
-  (* | Cqqspl x -> raise (Error "unquote-splicing: not valid here") *)
+  | Cqqspl x -> raise (Error "unquote-splicing: not valid here")
   (* | Ccond av -> *)
   (*     begin *)
   (*       let n = Array.length av in *)
