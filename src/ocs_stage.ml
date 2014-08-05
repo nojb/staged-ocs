@@ -137,10 +137,14 @@ let rec stage th cc =
                in
                  loop 0
              end >.
-  (* | Cif (c, tx, fx) -> *)
-  (*     eval th *)
-  (*       (function Sfalse -> eval th cc fx | _ -> eval th cc tx) *)
-  (*       c *)
+  | Cif (c, tx, fx) ->
+      .< let cc x = .~(cc .< x >.) in
+           .~(stage th
+                (fun v ->
+                   .< match .~v with
+                        Sfalse -> .~(stage th (fun x -> .< cc .~x >.) fx)
+                      | _ -> .~(stage th (fun x -> .< cc .~x >.) tx) >.)
+                c) >.
   (* | Csetg (g, c) -> *)
   (*     eval th (fun v -> *)
   (*       if g.g_val == Sunbound then *)
