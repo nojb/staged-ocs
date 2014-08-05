@@ -80,19 +80,19 @@ let chkargs p n =
 let rec stage th cc =
   function
     Cval v -> cc .< v >.
-  (* | Cseq2 (s1, s2) -> *)
-  (*     eval th (fun _ -> eval th cc s2) s1 *)
-  (* | Cseq3 (s1, s2, s3) -> *)
-  (*     eval th (fun _ -> eval th (fun _ -> eval th cc s3) s2) s1 *)
-  (* | Cseqn s -> *)
-  (*     let n = Array.length s in *)
-  (*       let rec loop i = *)
-  (*         if i = n - 1 then *)
-  (*           eval th cc s.(i) *)
-  (*         else *)
-  (*           eval th (fun _ -> loop (i + 1)) s.(i) *)
-  (*       in *)
-  (*         loop 0 *)
+  | Cseq2 (s1, s2) ->
+      stage th cc (Cseqn [| s1; s2 |])
+  | Cseq3 (s1, s2, s3) ->
+      stage th cc (Cseqn [| s1; s2; s3 |])
+  | Cseqn s ->
+      let n = Array.length s in
+        let rec loop i =
+          if i = n - 1 then
+            stage th cc s.(i)
+          else
+            stage th (fun v -> .< let _ = .~v in .~(loop (i + 1)) >.) s.(i)
+        in
+          loop 0
   (* | Cand2 (s1, s2) -> *)
   (*     eval th (function Sfalse -> cc Sfalse | _ -> eval th cc s2) s1 *)
   (* | Cand3 (s1, s2, s3) -> *)
