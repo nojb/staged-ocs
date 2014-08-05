@@ -26,8 +26,8 @@ let vt_global vt =
 let rec vt_copy vt vc =
   { vt_global =
       (match vt.vt_global with
-	  Some t -> Some (vt_copy t vc)
-	| _ -> None);
+          Some t -> Some (vt_copy t vc)
+        | _ -> None);
     vt_bindings =
       VarTable.map vc vt.vt_bindings }
 ;;
@@ -42,9 +42,9 @@ let rec var_find vt key =
   with
     Not_found ->
       begin
-	match vt.vt_global with
-	  Some x -> var_find x key
-	| _ -> None
+        match vt.vt_global with
+          Some x -> var_find x key
+        | _ -> None
       end
 ;;
 
@@ -54,12 +54,12 @@ let rec var_get vt key mkvar =
   with
     Not_found ->
       begin
-	match vt.vt_global with
-	  Some x -> var_get x key mkvar
-	| _ ->
-	    let r = mkvar () in
-	      var_insert vt key r;
-	      r
+        match vt.vt_global with
+          Some x -> var_get x key mkvar
+        | _ ->
+            let r = mkvar () in
+              var_insert vt key r;
+              r
       end
 ;;
 

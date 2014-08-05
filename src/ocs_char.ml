@@ -7,18 +7,18 @@ open Ocs_env
 (* Character name equivalents (long).  *)
 let char_long_names =
   [| 
-    "space",		' ';
-    "newline",		'\n';
+    "space",            ' ';
+    "newline",          '\n';
 
     (* The rest are extensions.  *)
-    "return",		'\r';
-    "tab",		'\t';
-    "backspace",	'\008';
-    "escape",		'\027';
-    "backslash",	'\\';
-    "alarm",		'\007';
-    "vtab",		'\011';
-    "del",		'\127' |]
+    "return",           '\r';
+    "tab",              '\t';
+    "backspace",        '\008';
+    "escape",           '\027';
+    "backslash",        '\\';
+    "alarm",            '\007';
+    "vtab",             '\011';
+    "del",              '\127' |]
 ;;
 
 (* Table of short names for 0 .. 31 *)
@@ -37,7 +37,7 @@ let name_to_char name =
     if i = ln then sloop 0
     else
       match char_long_names.(i) with
-	(n, c) -> if n = name then Some c else lloop (i + 1)
+        (n, c) -> if n = name then Some c else lloop (i + 1)
   and sloop i =
     if i = sn then None
     else if char_short_names.(i) = name then Some (char_of_int i)

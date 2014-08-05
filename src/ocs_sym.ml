@@ -11,8 +11,8 @@ module HashSymbol =
     type t = sval
     let equal a b =
       match (a, b) with
-	(Ssymbol s1, Ssymbol s2) -> s1 = s2
-	| _ -> false
+        (Ssymbol s1, Ssymbol s2) -> s1 = s2
+        | _ -> false
     let hash = Hashtbl.hash
   end
 

@@ -42,17 +42,17 @@ and read_list lex term =
       Leof -> raise (read_error lex "unexpected eof in list")
     | Ltoken c when c = term -> make_slist Snull r
     | Ltoken '.' ->
-	begin
-	  let tl =
-	    match get_tok lex with
-	      Leof -> raise (read_error lex "unexpected eof in dotted tail")
-	    | x -> read_item lex x
-	  in
-	    match get_tok lex with
-	      Ltoken c when c = term -> make_slist tl r
-	    | _ -> raise (read_error lex
-			    "expected close paren after dotted tail")
-	end
+        begin
+          let tl =
+            match get_tok lex with
+              Leof -> raise (read_error lex "unexpected eof in dotted tail")
+            | x -> read_item lex x
+          in
+            match get_tok lex with
+              Ltoken c when c = term -> make_slist tl r
+            | _ -> raise (read_error lex
+                            "expected close paren after dotted tail")
+        end
     | x -> loop ((read_item lex x)::r)
   in
     loop []
@@ -71,7 +71,7 @@ and read_quoted lex sym =
     Leof -> raise (read_error lex "unexpected eof")
   | x ->
       let x = read_item lex x in
-	Spair { car = sym; cdr = Spair { car = x; cdr = Snull }}
+        Spair { car = sym; cdr = Spair { car = x; cdr = Snull }}
 ;;
 
 let read_expr lex =

@@ -41,9 +41,9 @@ let bind_name e sym v =
       e.env_tagged <- (te, sym, v)::e.env_tagged
   | _ ->
       begin
-	match v with
-	  Vglob g -> g.g_sym <- sym
-	| _ -> ()
+        match v with
+          Vglob g -> g.g_sym <- sym
+        | _ -> ()
       end;
       var_insert e.env_vartable (sym_name sym) v
 ;;
@@ -58,10 +58,10 @@ let find_tagged te ts l =
   let rec loop =
     function
       (e, s, v)::t ->
-	if e == te && s == ts then
-	  Some v
-	else
-	  loop t
+        if e == te && s == ts then
+          Some v
+        else
+          loop t
     | [] -> None
   in
     loop l
@@ -71,9 +71,9 @@ let rec find_var e sym =
   match sym with
     Sesym (te, sym) ->
       begin
-	match find_tagged te sym e.env_tagged with
-	  Some _ as v -> v
-	| None -> find_var te sym
+        match find_tagged te sym e.env_tagged with
+          Some _ as v -> v
+        | None -> find_var te sym
       end
   | _ -> var_find e.env_vartable (sym_name sym)
 ;;
@@ -82,12 +82,12 @@ let rec get_var e sym =
   match sym with
     Sesym (te, sym) ->
       begin
-	match find_tagged te sym e.env_tagged with
-	  Some v -> v
-	| None -> get_var te sym
+        match find_tagged te sym e.env_tagged with
+          Some v -> v
+        | None -> get_var te sym
       end
   | _ -> var_get e.env_vartable (sym_name sym)
-		 (fun () -> Vglob { g_sym = sym; g_val = Sunbound })
+                 (fun () -> Vglob { g_sym = sym; g_val = Sunbound })
 ;;
 
 let set_glob e sym v =

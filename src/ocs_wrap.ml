@@ -14,22 +14,22 @@ module Make(T: sig type t end) =
 
     let unwrap =
       function
-	Swrapped f ->
-	  (try
-	    f ();
-	    raise (Error "unwrap: internal error")
-	   with E v -> v
-	   | _ -> raise (Error "unwrap: wrong wrapped type"))
+        Swrapped f ->
+          (try
+            f ();
+            raise (Error "unwrap: internal error")
+           with E v -> v
+           | _ -> raise (Error "unwrap: wrong wrapped type"))
       | _ -> raise (Error "unwrap: not a wrapped type")
 
     let try_unwrap =
       function
-	Swrapped f ->
-	  (try
-	    f ();
-	    None
-	   with E v -> Some v
-	   | _ -> None)
+        Swrapped f ->
+          (try
+            f ();
+            None
+           with E v -> Some v
+           | _ -> None)
       | _ -> None
   end
 

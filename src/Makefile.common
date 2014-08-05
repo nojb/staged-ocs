@@ -2,8 +2,7 @@
 # General OCaml build settings
 #
 
-OCAMLOPT = ocamlopt
-OCAMLC = ocamlc
+OCAMLC = metaocamlc
 OCAMLDEP = ocamldep
 
 OCAMLFLAGS =

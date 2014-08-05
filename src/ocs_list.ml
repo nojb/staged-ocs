@@ -98,19 +98,19 @@ let cptl tl =
   | Spair { car = h; cdr = t } ->
       let nl = Spair { car = h; cdr = Snull } in
       let rec loop =
-	function
-	  Spair p ->
-	    begin
-	      function
-		Spair { car = h; cdr = t } ->
-		  let n = Spair { car = h; cdr = Snull } in
-		    p.cdr <- n; loop n t
-	      | Snull -> p.cdr <- tl
-	      | _ -> raise (Error "append: bad list")
-	    end
-	| _ -> assert false
+        function
+          Spair p ->
+            begin
+              function
+                Spair { car = h; cdr = t } ->
+                  let n = Spair { car = h; cdr = Snull } in
+                    p.cdr <- n; loop n t
+              | Snull -> p.cdr <- tl
+              | _ -> raise (Error "append: bad list")
+            end
+        | _ -> assert false
       in
-	loop nl t; nl
+        loop nl t; nl
   | _ -> raise (Error "append: bad list")
 ;;
 
@@ -120,26 +120,26 @@ let append =
   | av ->
       let n = Array.length av in
       let rec loop i tl =
-	if i >= 0 then
-	  loop (i - 1) (cptl tl av.(i))
-	else
-	  tl
+        if i >= 0 then
+          loop (i - 1) (cptl tl av.(i))
+        else
+          tl
       in
-	loop (n - 2) av.(n - 1)
+        loop (n - 2) av.(n - 1)
 ;;
 
 let list_tail l =
   function
     Sint k ->
       begin
-	let rec tail i x =
-	  if i = 0 then x
-	  else
-	    match x with
-	      Spair { car = _; cdr = t } -> tail (i - 1) t
-	    | _ -> raise (Error "list-tail: bad list")
-	in
-	  tail k l
+        let rec tail i x =
+          if i = 0 then x
+          else
+            match x with
+              Spair { car = _; cdr = t } -> tail (i - 1) t
+            | _ -> raise (Error "list-tail: bad list")
+        in
+          tail k l
       end
   | _ -> raise (Error "list-tail: bad args")
 ;;
@@ -204,17 +204,17 @@ let list_to_vector =
       let n = safe_length l in
       let v = Array.make n Snull in
       let rec loop i l =
-	if i < n then
-	  begin
-	    match l with
-	      Spair { car = h; cdr = t } -> v.(i) <- h; loop (i + 1) t
-	    | _ -> assert false (* length was wrong?  *)
-	  end
-	else
-	  ()
+        if i < n then
+          begin
+            match l with
+              Spair { car = h; cdr = t } -> v.(i) <- h; loop (i + 1) t
+            | _ -> assert false (* length was wrong?  *)
+          end
+        else
+          ()
       in
-	loop 0 l;
-	Svector v
+        loop 0 l;
+        Svector v
   | _ -> raise (Error "list->vector: bad args")
 ;;
 
@@ -225,17 +225,17 @@ let list_to_string =
       let n = safe_length l in
       let s = String.create n in
       let rec loop i l =
-	if i < n then
-	  begin
-	    match l with
-	      Spair { car = Schar c; cdr = t } -> s.[i] <- c; loop (i + 1) t
-	    | _ -> raise (Error "list->string: non-characters in list")
-	  end
-	else
-	  ()
+        if i < n then
+          begin
+            match l with
+              Spair { car = Schar c; cdr = t } -> s.[i] <- c; loop (i + 1) t
+            | _ -> raise (Error "list->string: non-characters in list")
+          end
+        else
+          ()
       in
-	loop 0 l;
-	Sstring s
+        loop 0 l;
+        Sstring s
   | _ -> raise (Error "list->string: bad args")
 ;;
 

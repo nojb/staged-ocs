@@ -50,23 +50,23 @@ let parse_prefix s =
   let rec nextp b e =
     match speek s with
       Some '#' ->
-	begin
-	  skip s;
-	  match sget s with
-	    Some ('E' | 'e') ->
-	      if e <> Undef then raise (Error "invalid #e") else nextp b Exact
-	  | Some ('I' | 'i') ->
-	      if e <> Undef then raise (Error "invalid #i") else nextp b Inexact
-	  | Some ('B' | 'b') ->
-	      if b <> 0 then raise (Error "invalid #b") else nextp 2 e
-	  | Some ('O' | 'o') ->
-	      if b <> 0 then raise (Error "invalid #o") else nextp 8 e
-	  | Some ('D' | 'd') ->
-	      if b <> 0 then raise (Error "invalid #d") else nextp 10 e
-	  | Some ('X' | 'x') ->
-	      if b <> 0 then raise (Error "invalid #x") else nextp 16 e
-	  | _ -> raise (Error "invalid prefix")
-	end
+        begin
+          skip s;
+          match sget s with
+            Some ('E' | 'e') ->
+              if e <> Undef then raise (Error "invalid #e") else nextp b Exact
+          | Some ('I' | 'i') ->
+              if e <> Undef then raise (Error "invalid #i") else nextp b Inexact
+          | Some ('B' | 'b') ->
+              if b <> 0 then raise (Error "invalid #b") else nextp 2 e
+          | Some ('O' | 'o') ->
+              if b <> 0 then raise (Error "invalid #o") else nextp 8 e
+          | Some ('D' | 'd') ->
+              if b <> 0 then raise (Error "invalid #d") else nextp 10 e
+          | Some ('X' | 'x') ->
+              if b <> 0 then raise (Error "invalid #x") else nextp 16 e
+          | _ -> raise (Error "invalid prefix")
+        end
     | _ -> (b, e)
   in
     nextp 0 Undef
@@ -80,11 +80,11 @@ let strtobi s base =
       v
     else
       loop (i + 1) (am v
-	(match s.[i] with
-	  '0' .. '9' as c -> int_of_char c - int_of_char '0'
-	| 'a' .. 'f' as c -> int_of_char c - int_of_char 'a' + 10
-	| 'A' .. 'F' as c -> int_of_char c - int_of_char 'A' + 10
-	| _ -> raise (Error "invalid number")))
+        (match s.[i] with
+          '0' .. '9' as c -> int_of_char c - int_of_char '0'
+        | 'a' .. 'f' as c -> int_of_char c - int_of_char 'a' + 10
+        | 'A' .. 'F' as c -> int_of_char c - int_of_char 'A' + 10
+        | _ -> raise (Error "invalid number")))
   in
     loop 0 (big_int_of_int 0)
 ;;
@@ -111,72 +111,72 @@ let parse_num s base =
   in
     let rec scann v o =
       match speek s with
-	Some ('0' .. '9' as c)
-	  when (int_of_char c) - (int_of_char '0') < base ->
-	    addo v ((int_of_char c) - (int_of_char '0')) o
+        Some ('0' .. '9' as c)
+          when (int_of_char c) - (int_of_char '0') < base ->
+            addo v ((int_of_char c) - (int_of_char '0')) o
       | Some ('a' .. 'f' as c) when base = 16 ->
-	  addo v ((int_of_char c) - (int_of_char 'a') + 10) o
+          addo v ((int_of_char c) - (int_of_char 'a') + 10) o
       | Some ('A' .. 'F' as c) when base = 16 ->
-	  addo v ((int_of_char c) - (int_of_char 'A') + 10) o
+          addo v ((int_of_char c) - (int_of_char 'A') + 10) o
       | _ -> (v, o)
     and addo v i o =
       skip s;
       if o || v > maxv || (v = maxv && i > maxi) then
-	scann 0 true
+        scann 0 true
       else
-	scann (v * base + i) o
+        scann (v * base + i) o
     and readn () =
       let sp = s.s_pos in
-	match scann 0 false with
-	  (i, false) ->
-	    if s.s_pos = sp then
-	      raise (Error "invalid number")
-	    else
-	      Sint i
-	| (_, true) ->
-	    Sbigint (read_bigint (String.sub s.s_str sp (s.s_pos - sp)) base)
+        match scann 0 false with
+          (i, false) ->
+            if s.s_pos = sp then
+              raise (Error "invalid number")
+            else
+              Sint i
+        | (_, true) ->
+            Sbigint (read_bigint (String.sub s.s_str sp (s.s_pos - sp)) base)
     in
       let num = readn () in
-	match speek s with
-	  Some '/' ->
-	    skip s;
-	    fixsign (div2 (Sbigint (bigint_of_snum num))
-			  (Sbigint (bigint_of_snum (readn ()))))
-	| Some ('+' | '-' | '@') | None -> fixsign num
-	| _ -> raise (Error "invalid rational")
+        match speek s with
+          Some '/' ->
+            skip s;
+            fixsign (div2 (Sbigint (bigint_of_snum num))
+                          (Sbigint (bigint_of_snum (readn ()))))
+        | Some ('+' | '-' | '@') | None -> fixsign num
+        | _ -> raise (Error "invalid rational")
 ;;
 
 let parse_flo10 s =
   let sp = s.s_pos in
     let rec skipd isfirst =
       match speek s with
-	Some '0' .. '9' | Some '#' -> skip s; skipd false
+        Some '0' .. '9' | Some '#' -> skip s; skipd false
       | Some ('+' | '-') when isfirst -> skip s; skipd false
       | _ -> ()
     in
       skipd true;
       if speek s = Some '.' then
-	begin
-	  skip s;
-	  skipd false
-	end;
+        begin
+          skip s;
+          skipd false
+        end;
       begin
-	match speek s with
-	  Some ('E' | 'e' | 'F' | 'f' | 'D' | 'd' | 'S' | 's' | 'L' | 'l') ->
-	      skip s; skipd true
-	  | _ -> ()
+        match speek s with
+          Some ('E' | 'e' | 'F' | 'f' | 'D' | 'd' | 'S' | 's' | 'L' | 'l') ->
+              skip s; skipd true
+          | _ -> ()
       end;
       let t = String.sub s.s_str sp (s.s_pos - sp) in
-	for i = 0 to String.length t - 1 do
-	  match t.[i] with
-	    '#' -> t.[i] <- '0'
-	  | 'F' | 'f' | 'D' | 'd' | 'S' | 's' | 'L' | 'l' -> t.[i] <- 'e'
-	  | _ -> ()
-	done;
-	  try
-	    Sreal (float_of_string t)
-	  with
-	    Failure _ -> raise (Error "invalid float")
+        for i = 0 to String.length t - 1 do
+          match t.[i] with
+            '#' -> t.[i] <- '0'
+          | 'F' | 'f' | 'D' | 'd' | 'S' | 's' | 'L' | 'l' -> t.[i] <- 'e'
+          | _ -> ()
+        done;
+          try
+            Sreal (float_of_string t)
+          with
+            Failure _ -> raise (Error "invalid float")
 ;;
 
 let string_to_num str ub =
@@ -192,86 +192,86 @@ let string_to_num str ub =
       0, x -> if ub = 0 then (10, x) else (ub, x)
     | (b, x) as r ->
       if ub <> 0 && ub <> b then
-	raise (Error "Base mismatch")
+        raise (Error "Base mismatch")
       else r
   in
     let getn () =
       if base = 10 && ex <> Exact then
-	begin
-	  let sp = s.s_pos in
-	    try
-	      parse_num s 10
-	    with _ ->
-	      s.s_pos <- sp;
-	      parse_flo10 s
-	end
+        begin
+          let sp = s.s_pos in
+            try
+              parse_num s 10
+            with _ ->
+              s.s_pos <- sp;
+              parse_flo10 s
+        end
       else
-	parse_num s base
+        parse_num s base
     and fixex n =
       match (ex, n) with
-	(Inexact, (Sint _ | Sbigint _ | Srational _)) -> promote_real n
+        (Inexact, (Sint _ | Sbigint _ | Srational _)) -> promote_real n
       | (Exact, (Sreal _ | Scomplex _)) -> raise (Error "Not exact")
       | _ -> n
     in
       let a = fixex (getn ()) in
-	match speek s with
-	  Some ('+' | '-' as c) ->
-	    if ex = Exact then
-	      raise (Error "Complex not exact")
-	    else
-	      if ssleft s = 2 && s.s_str.[s.s_pos + 1] = 'i' then
-		Scomplex { Complex.re = float_of_snum a;
-			   Complex.im = (if c = '-' then -1.0 else 1.0) }
-	      else
-		let b = getn () in
-		  if ssleft s <> 1 || speek s <> Some 'i' then
-		    raise (Error "invalid number")
-		  else
-		    Scomplex { Complex.re = float_of_snum a;
-			       Complex.im = float_of_snum b }
-	| Some '@' ->
+        match speek s with
+          Some ('+' | '-' as c) ->
+            if ex = Exact then
+              raise (Error "Complex not exact")
+            else
+              if ssleft s = 2 && s.s_str.[s.s_pos + 1] = 'i' then
+                Scomplex { Complex.re = float_of_snum a;
+                           Complex.im = (if c = '-' then -1.0 else 1.0) }
+              else
+                let b = getn () in
+                  if ssleft s <> 1 || speek s <> Some 'i' then
+                    raise (Error "invalid number")
+                  else
+                    Scomplex { Complex.re = float_of_snum a;
+                               Complex.im = float_of_snum b }
+        | Some '@' ->
             skip s;
-	    if ex = Exact then
-	      raise (Error "Complex not exact")
-	    else
-	      let b = getn () in
-		if ssleft s <> 0 then
-		  raise (Error "invalid number")
-		else
-		  let r = float_of_snum a
-		  and t = float_of_snum b in
-		    Scomplex (Complex.polar r t)
-	| Some c -> raise (Error "invalid number")
-	| None -> a
+            if ex = Exact then
+              raise (Error "Complex not exact")
+            else
+              let b = getn () in
+                if ssleft s <> 0 then
+                  raise (Error "invalid number")
+                else
+                  let r = float_of_snum a
+                  and t = float_of_snum b in
+                    Scomplex (Complex.polar r t)
+        | Some c -> raise (Error "invalid number")
+        | None -> a
 ;;
 
 let snum_strtonum av =
   match Array.length av with
     (1 | 2) as n ->
       let r =
-	if n = 2 then
-	  begin
-	    match av.(1) with
-	      Sint i -> i
-	    | _ -> raise (Error "string->number: invalid radix")
-	  end
-	else
-	  0
+        if n = 2 then
+          begin
+            match av.(1) with
+              Sint i -> i
+            | _ -> raise (Error "string->number: invalid radix")
+          end
+        else
+          0
       in
-	begin
-	  match av.(0) with
-	    Sstring s ->
-	      begin
-		try
-		  if s = "" then
-		    Sfalse
-		  else
-		    string_to_num s r
-		with
-		  _ -> Sfalse
-	      end
-	  | _ -> raise (Error "string->number: not a string")
-	end
+        begin
+          match av.(0) with
+            Sstring s ->
+              begin
+                try
+                  if s = "" then
+                    Sfalse
+                  else
+                    string_to_num s r
+                with
+                  _ -> Sfalse
+              end
+          | _ -> raise (Error "string->number: not a string")
+        end
   | _ -> raise (Error "string->number: wrong number of args")
 ;;
 
@@ -299,17 +299,17 @@ let string_of_complex =
   function { Complex.re = r; Complex.im = i } ->
     (string_of_real_s r) ^
       (if i < 0.0 then
-	begin
-	  if i = -1.0 then
-	    "-i"
-	  else
-	    (string_of_real_s i) ^ "i"
-	end
+        begin
+          if i = -1.0 then
+            "-i"
+          else
+            (string_of_real_s i) ^ "i"
+        end
       else
-	if i = 1.0 then
-	  "+i"
-	else
-	  "+" ^ (string_of_real_s i) ^ "i")
+        if i = 1.0 then
+          "+i"
+        else
+          "+" ^ (string_of_real_s i) ^ "i")
 ;;
 
 let ichr i =
@@ -325,9 +325,9 @@ let string_of_list l =
   let rec loop i l =
     if i < n then
       begin
-	match l with
-	  c::t -> s.[i] <- c; loop (i + 1) t
-	| _ -> assert false
+        match l with
+          c::t -> s.[i] <- c; loop (i + 1) t
+        | _ -> assert false
       end
     else
       ()
@@ -342,9 +342,9 @@ let itostr base i =
     let pf = if i < 0 then "-" else "" in
     let rec loop i r =
       if i = 0 then
-	r
+        r
       else
-	loop (i / base) ((ichr (i mod base))::r)
+        loop (i / base) ((ichr (i mod base))::r)
     in
       pf ^ string_of_list (loop (abs i) [])
 ;;
@@ -359,13 +359,13 @@ let bitostr base bi =
   let rec loop bi r =
     if sign_big_int bi = 0 then
       begin
-	match r with
-	  [] -> [ '0' ]
-	| _ -> r
+        match r with
+          [] -> [ '0' ]
+        | _ -> r
       end
     else
       let (q, m) = biqmi bi base in
-	loop q ((ichr m)::r)
+        loop q ((ichr m)::r)
   in
     pf ^ string_of_list (loop (abs_big_int bi) [])
 ;;
@@ -388,11 +388,11 @@ let rec snum_numtostr =
   | [| Scomplex z |] -> Sstring (string_of_complex z)
   | [| snum; Sint radix |] ->
       if radix = 10 then
-	snum_numtostr [| snum |]
+        snum_numtostr [| snum |]
       else if radix = 2 || radix = 8 || radix = 16 then
-	Sstring (ntostr radix snum)
+        Sstring (ntostr radix snum)
       else
-	raise (Error "number->string: invalid radix")
+        raise (Error "number->string: invalid radix")
   | _ -> raise (Error "number->string: bad args")
 ;;
 

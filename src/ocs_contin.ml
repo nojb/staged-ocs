@@ -10,14 +10,14 @@ let rec find_depth fdx tdx al bl =
   match (fdx, tdx) with
     (Some f, Some t) ->
       if f.dynext_parent == t.dynext_parent then
-	(List.rev (f.dynext_after::al), t.dynext_before::bl)
+        (List.rev (f.dynext_after::al), t.dynext_before::bl)
       else if f.dynext_depth > t.dynext_depth then
-	find_depth f.dynext_parent tdx (f.dynext_after::al) bl
+        find_depth f.dynext_parent tdx (f.dynext_after::al) bl
       else if f.dynext_depth < t.dynext_depth then
-	find_depth fdx t.dynext_parent al (t.dynext_before::bl)
+        find_depth fdx t.dynext_parent al (t.dynext_before::bl)
       else
-	find_depth f.dynext_parent t.dynext_parent
-	  (f.dynext_after::al) (t.dynext_before::bl)
+        find_depth f.dynext_parent t.dynext_parent
+          (f.dynext_after::al) (t.dynext_before::bl)
   | (Some f, None) ->
       find_depth f.dynext_parent tdx (f.dynext_after::al) bl
   | (None, Some t) ->
@@ -33,15 +33,15 @@ let dxswitch fdx tdx cont =
     let (al, bl) = find_depth fdx tdx [] [] in
     let rec bloop =
       function
-	[] -> cont ()
+        [] -> cont ()
       | h::t -> eval (fst h) (fun _ -> bloop t) (snd h)
     in
       let rec aloop =
-	function
-	  [] -> bloop bl
-	| h::t -> eval (fst h) (fun _ -> aloop t) (snd h)
+        function
+          [] -> bloop bl
+        | h::t -> eval (fst h) (fun _ -> aloop t) (snd h)
       in
-	aloop al
+        aloop al
 ;;
 
 let continuation dx cc th _ =
@@ -54,10 +54,10 @@ let call_cc th cc =
   function
     [| proc |] ->
       let cont =
-	Sprim { prim_fun = Pfcn (continuation th.th_dynext cc);
-	        prim_name = "<continuation>" }
+        Sprim { prim_fun = Pfcn (continuation th.th_dynext cc);
+                prim_name = "<continuation>" }
       in
-	eval th cc (Capply1 (Cval proc, Cval cont))
+        eval th cc (Capply1 (Cval proc, Cval cont))
   | _ -> raise (Error "call/cc: bad args")
 ;;
 
@@ -71,12 +71,12 @@ let call_values th cc =
   function
     [| producer; consumer |] ->
       eval th
-	(function
-	  Svalues av ->
-	    eval th cc (mkapply (Cval consumer)
-	                        (Array.map (fun x -> Cval x) av))
-	| x -> eval th cc (Capply1 (Cval consumer, Cval x)))
-	(Capply0 (Cval producer))
+        (function
+          Svalues av ->
+            eval th cc (mkapply (Cval consumer)
+                                (Array.map (fun x -> Cval x) av))
+        | x -> eval th cc (Capply1 (Cval consumer, Cval x)))
+        (Capply0 (Cval producer))
   | _ -> raise (Error "call-with-values: bad args")
 ;;
 
@@ -86,19 +86,19 @@ let dynamic_wind th cc =
       let before = Capply0 (Cval before)
       and after = Capply0 (Cval after) in
       let ndx = {
-	dynext_parent = th.th_dynext;
-	dynext_depth =
-	  (match th.th_dynext with
-	    None -> 0
-	  | Some dx -> dx.dynext_depth + 1);
-	dynext_before = (th, before);
-	dynext_after = (th, after)
+        dynext_parent = th.th_dynext;
+        dynext_depth =
+          (match th.th_dynext with
+            None -> 0
+          | Some dx -> dx.dynext_depth + 1);
+        dynext_before = (th, before);
+        dynext_after = (th, after)
       } in
-	eval th
-	  (fun _ ->
-	    eval { th with th_dynext = Some ndx }
-	      (fun r ->
-		eval th (fun _ -> cc r) after) (Capply0 (Cval thunk))) before
+        eval th
+          (fun _ ->
+            eval { th with th_dynext = Some ndx }
+              (fun r ->
+                eval th (fun _ -> cc r) after) (Capply0 (Cval thunk))) before
   | _ -> raise (Error "dynamic-wind: bad args")
 ;;
 

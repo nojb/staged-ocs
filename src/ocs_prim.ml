@@ -103,35 +103,35 @@ let do_apply th cc av =
     else
       let f = av.(0) in
       let rec loop i r =
-	if i = 0 then
-	  r
-	else if i = n - 1 then	(* r must be [] *)
-	  loop (i - 1) (list_to_caml av.(i))
-	else
-	  loop (i - 1) (av.(i)::r)
+        if i = 0 then
+          r
+        else if i = n - 1 then  (* r must be [] *)
+          loop (i - 1) (list_to_caml av.(i))
+        else
+          loop (i - 1) (av.(i)::r)
       in
-	let args = Array.map (fun x -> Cval x)
-			     (Array.of_list (loop (n - 1) []))
-	in
-	  eval th cc (mkapply (Cval f) args)
+        let args = Array.map (fun x -> Cval x)
+                             (Array.of_list (loop (n - 1) []))
+        in
+          eval th cc (mkapply (Cval f) args)
 ;;
 
 let force _ cc =
   function
     [| Spromise ({ promise_code = c;
-	           promise_val = None;
-		   promise_th = Some th } as p) |] ->
+                   promise_val = None;
+                   promise_th = Some th } as p) |] ->
       eval th
-	(fun v ->
-	  match p.promise_val with		(* Computed before returning? *)
-	    Some v -> cc v
-	  | None ->
-	      p.promise_val <- Some v;
-	      p.promise_th <- None;		(* Release reference for gc *)
-	      cc v) c
+        (fun v ->
+          match p.promise_val with              (* Computed before returning? *)
+            Some v -> cc v
+          | None ->
+              p.promise_val <- Some v;
+              p.promise_th <- None;             (* Release reference for gc *)
+              cc v) c
   | [| Spromise { promise_code = _;
-	          promise_val = Some v;
-	          promise_th = _ } |] ->
+                  promise_val = Some v;
+                  promise_th = _ } |] ->
       cc v
   | _ -> raise (Error "force: bad args")
 ;;
@@ -144,41 +144,41 @@ let map_for_each th cc av is_map =
     let proc = av.(0)
     and get_cdr =
       function
-	Spair { car = _; cdr = t } -> t
+        Spair { car = _; cdr = t } -> t
       | _ -> raise (Error (my_name ^ ": list lengths don't match"))
     and get_carc =
       function
-	Spair { car = h; cdr = _ } -> Cval h
+        Spair { car = h; cdr = _ } -> Cval h
       | _ -> raise (Error (my_name ^ ": list lengths don't match"))
     and result = ref (if is_map then Snull else Sunspec)
     and rtail = ref Snull in
     let append v =
       if !rtail == Snull then
-	begin
-	  result := Spair { car = v; cdr = Snull };
-	  rtail := !result;
-	end
+        begin
+          result := Spair { car = v; cdr = Snull };
+          rtail := !result;
+        end
       else
-	begin
-	  match !rtail with
-	    Spair p ->
-	      p.cdr <- Spair { car = v; cdr = Snull };
-	      rtail := p.cdr
-	  | _ -> assert false
-	end
+        begin
+          match !rtail with
+            Spair p ->
+              p.cdr <- Spair { car = v; cdr = Snull };
+              rtail := p.cdr
+          | _ -> assert false
+        end
     in
       let rec loop args =
-	match args.(0) with
-	  Snull -> cc !result
-	| Spair _ ->
-	    eval th
-	      (fun v ->
-		if is_map then append v;
-		loop (Array.map get_cdr args))
-	      (mkapply (Cval proc) (Array.map get_carc args))
-	| _ -> raise (Error (my_name ^ ": invalid argument lists"))
+        match args.(0) with
+          Snull -> cc !result
+        | Spair _ ->
+            eval th
+              (fun v ->
+                if is_map then append v;
+                loop (Array.map get_cdr args))
+              (mkapply (Cval proc) (Array.map get_carc args))
+        | _ -> raise (Error (my_name ^ ": invalid argument lists"))
       in
-	loop (Array.sub av 1 na)
+        loop (Array.sub av 1 na)
 ;;
 
 let map th cc av =
@@ -197,9 +197,9 @@ let load_file e th name =
     match Ocs_read.read_expr lex with
       Seof -> ()
     | v ->
-	let c = compile e v in
-	  eval th (fun _ -> ()) c;
-	  loop ()
+        let c = compile e v in
+          eval th (fun _ -> ()) c;
+          loop ()
   in
     loop ()
 ;;
@@ -214,7 +214,7 @@ let eval_prim th cc =
   function
     [| expr; Sesym (e, _) |] ->
       eval { th with th_display = [| |]; th_depth = -1 } cc
-	(compile e expr)
+        (compile e expr)
   | _ -> raise (Error "eval: invalid args")
 ;;
 

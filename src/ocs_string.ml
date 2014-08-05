@@ -16,7 +16,7 @@ let string_of av =
   let s = String.create n in
     for i = 0 to n - 1 do
       match av.(i) with
-	Schar c -> s.[i] <- c
+        Schar c -> s.[i] <- c
       | _ -> raise (Error "string: bad args")
     done;
     Sstring s
@@ -32,9 +32,9 @@ let string_ref s k =
   match (s, k) with
     (Sstring s, Sint k) ->
       if k >= 0 && k < String.length s then
-	Schar s.[k]
+        Schar s.[k]
       else
-	raise (Error "string-ref: out of bounds")
+        raise (Error "string-ref: out of bounds")
   | _ -> raise (Error "string-ref: bad args")
 ;;
 
@@ -42,11 +42,11 @@ let string_set s k c =
   match (s, k, c) with
     (Sstring s, Sint k, Schar c) ->
       if k >= 0 && k < String.length s then
-	begin
-	  s.[k] <- c; Sunspec
-	end
+        begin
+          s.[k] <- c; Sunspec
+        end
       else
-	raise (Error "string-set!: out of bounds")
+        raise (Error "string-set!: out of bounds")
   | _ -> raise (Error "string-set!: bad args")
 ;;
 
@@ -87,10 +87,10 @@ let substring s sp ep =
   match (s, sp, ep) with
     (Sstring s, Sint sp, Sint ep) ->
       let n = String.length s in
-	if sp >= 0 && sp <= ep && ep <= n then
-	  Sstring (String.sub s sp (ep - sp))
-	else
-	  raise (Error "substring: out of bounds")
+        if sp >= 0 && sp <= ep && ep <= n then
+          Sstring (String.sub s sp (ep - sp))
+        else
+          raise (Error "substring: out of bounds")
   | _ -> raise (Error "substring: bad args")
 ;;
 
@@ -98,11 +98,11 @@ let string_to_list =
   function
     Sstring s ->
       begin
-	let rec loop i r =
-	  if i < 0 then r
-	  else loop (i - 1) (Spair { car = Schar s.[i]; cdr = r })
-	in
-	  loop (String.length s - 1) Snull
+        let rec loop i r =
+          if i < 0 then r
+          else loop (i - 1) (Spair { car = Schar s.[i]; cdr = r })
+        in
+          loop (String.length s - 1) Snull
       end
   | _ -> raise (Error "string->list: not a string")
 ;;

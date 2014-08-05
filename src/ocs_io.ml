@@ -159,7 +159,7 @@ let call_w_in th cc =
   function
     [| name; proc |] ->
       let p = open_input_file name in
-	eval th (fun x -> close_port p; cc x) (Capply1 (Cval proc, Cval p))
+        eval th (fun x -> close_port p; cc x) (Capply1 (Cval proc, Cval p))
   | _ -> raise (Error "call-with-input-file: bad args")
 ;;
 
@@ -167,7 +167,7 @@ let call_w_out th cc =
   function
     [| name; proc |] ->
       let p = open_output_file name in
-	eval th (fun x -> close_port p; cc x) (Capply1 (Cval proc, Cval p))
+        eval th (fun x -> close_port p; cc x) (Capply1 (Cval proc, Cval p))
   | _ -> raise (Error "call-with-output-file: bad args")
 ;;
 
@@ -175,9 +175,9 @@ let w_in th cc =
   function
     [| name; thunk |] ->
       let p = open_input_file name in
-	eval { th with th_stdin = p }
-	     (fun x -> close_port p; cc x)
-	     (Capply0 (Cval thunk))
+        eval { th with th_stdin = p }
+             (fun x -> close_port p; cc x)
+             (Capply0 (Cval thunk))
   | _ -> raise (Error "with-input-from-file: bad args")
 ;;
 
@@ -185,9 +185,9 @@ let w_out th cc =
   function
     [| name; thunk |] ->
       let p = open_output_file name in
-	eval { th with th_stdout = p }
-	     (fun x -> close_port p; cc x)
-	     (Capply0 (Cval thunk))
+        eval { th with th_stdout = p }
+             (fun x -> close_port p; cc x)
+             (Capply0 (Cval thunk))
   | _ -> raise (Error "with-output-to-file: bad args")
 ;;
 

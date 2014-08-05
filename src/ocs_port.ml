@@ -58,24 +58,24 @@ let wrflush p =
   match p.p_fd with
     Some fd ->
       if p.p_wend > 0 && p.p_pos > 0 then
-	begin
-	  try
-	    let n = Unix.write fd p.p_buf 0 p.p_pos in
-	      if n <> p.p_pos then
-		raise (Error "write error: incomplete write")
-	  with
-	    Unix.Unix_error (e, _, _) ->
-	      raise (Error ("write error: " ^ Unix.error_message e))
-	end;
+        begin
+          try
+            let n = Unix.write fd p.p_buf 0 p.p_pos in
+              if n <> p.p_pos then
+                raise (Error "write error: incomplete write")
+          with
+            Unix.Unix_error (e, _, _) ->
+              raise (Error ("write error: " ^ Unix.error_message e))
+        end;
       p.p_pos <- 0;
       p.p_wend <- String.length p.p_buf
   | None ->
       if p.p_pos = p.p_wend then
-	let n = String.length p.p_buf in
-	let nbuf = String.create (n * 2) in
-	  String.blit p.p_buf 0 nbuf 0 n;
-	  p.p_buf <- nbuf;
-	  p.p_wend <- String.length p.p_buf
+        let n = String.length p.p_buf in
+        let nbuf = String.create (n * 2) in
+          String.blit p.p_buf 0 nbuf 0 n;
+          p.p_buf <- nbuf;
+          p.p_wend <- String.length p.p_buf
 ;;
 
 let rdfill p =
@@ -89,11 +89,11 @@ let rdfill p =
   match p.p_fd with
     Some fd ->
       begin
-	try
-	  p.p_rend <- Unix.read fd p.p_buf 0 (String.length p.p_buf)
-	with
-	  Unix.Unix_error (e, _, _) ->
-	    raise (Error ("read error: " ^ Unix.error_message e))
+        try
+          p.p_rend <- Unix.read fd p.p_buf 0 (String.length p.p_buf)
+        with
+          Unix.Unix_error (e, _, _) ->
+            raise (Error ("read error: " ^ Unix.error_message e))
       end
   | None -> ()
 ;;
@@ -105,12 +105,12 @@ let getc p =
       if p.p_rend = 0 || p.p_pos >= p.p_rend then rdfill p;
       if p.p_rend = 0 then None
       else
-	begin
-	  assert (p.p_pos < p.p_rend);
-	  let c = p.p_buf.[p.p_pos] in
-	    p.p_pos <- p.p_pos + 1;
-	    Some c
-	end
+        begin
+          assert (p.p_pos < p.p_rend);
+          let c = p.p_buf.[p.p_pos] in
+            p.p_pos <- p.p_pos + 1;
+            Some c
+        end
 ;;
 
 let get_fd p =
@@ -129,9 +129,9 @@ let close p =
       p.p_input <- false;
       p.p_output <- false;
       match p.p_fd with
-	Some fd ->
-	  if p.p_close then Unix.close fd;
-	  p.p_fd <- None
+        Some fd ->
+          if p.p_close then Unix.close fd;
+          p.p_fd <- None
       | None -> ()
     end
 ;;
@@ -146,8 +146,8 @@ let char_ready p =
   else
     match p.p_fd with
       Some fd ->
-	let (r, _, _) = Unix.select [ fd ] [] [] 0.0 in
-	  List.length r > 0
+        let (r, _, _) = Unix.select [ fd ] [] [] 0.0 in
+          List.length r > 0
     | None -> false
 ;;
 
@@ -163,8 +163,8 @@ let puts p s =
   let n = String.length s in
     if n > 0 && p.p_rend - p.p_pos >= n then
       begin
-	String.blit s 0 p.p_buf p.p_pos n;
-	p.p_pos <- p.p_pos + n
+        String.blit s 0 p.p_buf p.p_pos n;
+        p.p_pos <- p.p_pos + n
       end
     else
       String.iter (fun c -> putc p c) s
@@ -175,9 +175,9 @@ let fd_port fd flags =
   and outf = ref false
   and clf = ref false in
     List.iter (function
-		Pf_input -> inf := true
-	      | Pf_output -> outf := true
-	      | Pf_close -> clf := true) flags;
+                Pf_input -> inf := true
+              | Pf_output -> outf := true
+              | Pf_close -> clf := true) flags;
     let p = mkport (mkbuf ()) (Some fd) !inf !outf !clf in
       if !clf then Gc.finalise close p;
       p
@@ -198,18 +198,18 @@ let open_input_port name =
   with
     Unix.Unix_error (e, _, _) ->
       let err = Unix.error_message e in
-	raise (Error ("unable to open '" ^ name ^ "' for input: " ^ err))
+        raise (Error ("unable to open '" ^ name ^ "' for input: " ^ err))
 ;;
 
 let open_output_port name =
   try
     let fd = Unix.openfile name [ Unix.O_WRONLY; Unix.O_APPEND;
-				  Unix.O_CREAT; Unix.O_TRUNC ] 0o666 in
+                                  Unix.O_CREAT; Unix.O_TRUNC ] 0o666 in
       fd_port fd [ Pf_output; Pf_close ]
   with
     Unix.Unix_error (e, _, _) ->
       let err = Unix.error_message e in
-	raise (Error ("unable to open '" ^ name ^ "' for output: " ^ err))
+        raise (Error ("unable to open '" ^ name ^ "' for output: " ^ err))
 ;;
 
 let string_input_port s =

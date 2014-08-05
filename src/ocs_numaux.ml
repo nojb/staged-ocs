@@ -154,7 +154,7 @@ let f_is_int m e =
   if e < 0 then false
   else if e >= 52 then true
   else Int64.compare (Int64.logand fm_bits
-				   (Int64.shift_left m e)) Int64.zero = 0
+                                   (Int64.shift_left m e)) Int64.zero = 0
 ;;
 
 (* Convert an int64 into a bigint, possibly ignoring the most
@@ -167,7 +167,7 @@ let big_int_of_int64 i =
     let lo = Int64.to_int i land 0x3fffffff
     and hi = Int64.to_int (Int64.shift_right i 30) in
       add_big_int (big_int_of_int lo)
-	(mult_big_int (big_int_of_int hi) (power_int_positive_int 2 30))
+        (mult_big_int (big_int_of_int hi) (power_int_positive_int 2 30))
 ;;
 
 let float_to_exact f =
@@ -182,20 +182,20 @@ let float_to_exact f =
     and is_neg = fb_get_s fb in
     let bm = big_int_of_int64 m in
       if f_is_int m e then
-	let wrap = if is_neg then minus_big_int else fun x -> x in
-	  if e = 52 then
-	    Sbigint (wrap bm)
-	  else if e > 52 then
-	    Sbigint (wrap (mult_big_int bm (power_int_positive_int 2 (e - 52))))
-	  else
-	    Sbigint (wrap (div_big_int bm (power_int_positive_int 2 (52 - e))))
+        let wrap = if is_neg then minus_big_int else fun x -> x in
+          if e = 52 then
+            Sbigint (wrap bm)
+          else if e > 52 then
+            Sbigint (wrap (mult_big_int bm (power_int_positive_int 2 (e - 52))))
+          else
+            Sbigint (wrap (div_big_int bm (power_int_positive_int 2 (52 - e))))
       else
-	let wrap = if is_neg then minus_ratio else fun x -> x in
-	  if e < -1022 then (* not normalized, no implied mantissa bit *)
-	    Srational (wrap (create_ratio (big_int_of_int64 (fb_get_dm fb))
-			     (power_int_positive_int 2 (51 - e))))
-	  else
-	    Srational (wrap (create_ratio bm
-			     (power_int_positive_int 2 (52 - e))))
+        let wrap = if is_neg then minus_ratio else fun x -> x in
+          if e < -1022 then (* not normalized, no implied mantissa bit *)
+            Srational (wrap (create_ratio (big_int_of_int64 (fb_get_dm fb))
+                             (power_int_positive_int 2 (51 - e))))
+          else
+            Srational (wrap (create_ratio bm
+                             (power_int_positive_int 2 (52 - e))))
 ;;
 

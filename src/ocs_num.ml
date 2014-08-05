@@ -26,13 +26,13 @@ let add2 a b =
   match (a, b) with
     (Sint i1, Sint i2) -> 
       let r = i1 + i2 in
-	if (i1 lxor i2) lor (i1 lxor (r lxor (-1))) < 0
-	then Sint r
-	else Sbigint (add_big_int (big_int_of_int i1) (big_int_of_int i2))
+        if (i1 lxor i2) lor (i1 lxor (r lxor (-1))) < 0
+        then Sint r
+        else Sbigint (add_big_int (big_int_of_int i1) (big_int_of_int i2))
   | (Scomplex z1, Scomplex z2) -> Scomplex (Complex.add z1 z2)
   | (Scomplex z, o) | (o, Scomplex z) ->
       Scomplex (Complex.add z { Complex.re = float_of_snum o;
-			        Complex.im = 0.0 })
+                                Complex.im = 0.0 })
   | (Sreal r, o) | (o, Sreal r) ->
       Sreal ((float_of_snum o) +. r)
   | (Srational r, o) | (o, Srational r) ->
@@ -69,9 +69,9 @@ let div2 a b =
       snum_of_num (div_num (Big_int n) (Big_int d))
   | (Sint n, Sint d) ->
       if d = 0 then
-	raise (Error "division by zero")
+        raise (Error "division by zero")
       else
-	snum_of_num (div_num (Int n) (Int d))
+        snum_of_num (div_num (Int n) (Int d))
   | _ -> raise (Error "div: invalid args")
 ;;
 
@@ -82,24 +82,24 @@ let cmp2 eq_only a b =
   | _ ->
     begin
       match snum_fixtypes a b with
-	(Sreal r1, Sreal r2) ->
-	  let r = r1 -. r2 in
-	    if r > 0.0 then 1 else if r < 0.0 then -1 else 0
+        (Sreal r1, Sreal r2) ->
+          let r = r1 -. r2 in
+            if r > 0.0 then 1 else if r < 0.0 then -1 else 0
       | (Scomplex z1, Scomplex z2) ->
-	  if eq_only then
-	    if z1 = z2 then 0 else 1
-	  else
-	    if z1.Complex.im = 0.0 && z2.Complex.im = 0.0 then
-	      begin
-		let r = z1.Complex.re -. z2.Complex.re in
-		  if r > 0.0 then 1 else if r < 0.0 then -1 else 0
-	      end
-	    else
-	      raise (Error "complex numbers compared")
+          if eq_only then
+            if z1 = z2 then 0 else 1
+          else
+            if z1.Complex.im = 0.0 && z2.Complex.im = 0.0 then
+              begin
+                let r = z1.Complex.re -. z2.Complex.re in
+                  if r > 0.0 then 1 else if r < 0.0 then -1 else 0
+              end
+            else
+              raise (Error "complex numbers compared")
       | (Srational r1, Srational r2) ->
-	  compare_ratio r1 r2
+          compare_ratio r1 r2
       | (Sbigint bi1, Sbigint bi2) ->
-	  compare_big_int bi1 bi2
+          compare_big_int bi1 bi2
       | _ -> raise (Error "cmp: invalid args")
     end
 ;;
@@ -121,9 +121,9 @@ let to_exact =
     Sreal r -> float_to_exact r
   | Scomplex z ->
       if z.Complex.im = 0.0 then
-	float_to_exact z.Complex.re
+        float_to_exact z.Complex.re
       else
-	raise (Error "inexact->exact: no exact complex representation")
+        raise (Error "inexact->exact: no exact complex representation")
   | (Sint _ | Sbigint _ | Srational _) as n -> n
   | _ -> raise (Error "inexact->exact: not a number")
 ;;
@@ -211,7 +211,7 @@ let do_ops op av n =
   let rec oploop v i =
     if i < n then
       let r = op v av.(i) in
-	oploop r (i + 1)
+        oploop r (i + 1)
     else
       v
   in
@@ -252,15 +252,15 @@ let snum_eq av =
   | n ->
       let a0 = av.(0) in
       let rec loop i =
-	if i < n then
-	  begin
-	    if cmp2 true a0 av.(i) <> 0 then Sfalse
-	    else loop (i + 1)
-	  end
-	else
-	  Strue
+        if i < n then
+          begin
+            if cmp2 true a0 av.(i) <> 0 then Sfalse
+            else loop (i + 1)
+          end
+        else
+          Strue
       in
-	loop 1
+        loop 1
 ;;
 
 let snum_rel op av =
@@ -268,15 +268,15 @@ let snum_rel op av =
     0 | 1 -> Strue
   | n ->
       let rec loop v i =
-	if i < n then
-	  begin
-	    if op (cmp2 false v av.(i)) 0 then loop av.(i) (i + 1)
-	    else Sfalse
-	  end
-	else
-	  Strue
+        if i < n then
+          begin
+            if op (cmp2 false v av.(i)) 0 then loop av.(i) (i + 1)
+            else Sfalse
+          end
+        else
+          Strue
       in
-	loop av.(0) 1
+        loop av.(0) 1
 ;;
 
 let snum_minormax op av =
@@ -286,11 +286,11 @@ let snum_minormax op av =
   | n ->
       let inex = ref false in
       let r = do_ops (fun a b ->
-			if is_inexact a = Strue || is_inexact b = Strue then
-			  inex := true;
-			if op (cmp2 false a b) 0 then a else b) av n
+                        if is_inexact a = Strue || is_inexact b = Strue then
+                          inex := true;
+                        if op (cmp2 false a b) 0 then a else b) av n
       in
-	if !inex then to_inexact r else r
+        if !inex then to_inexact r else r
 ;;
 
 let snum_abs =
@@ -325,9 +325,9 @@ let snum_truncate =
   | Srational r -> bigint_res (integer_ratio r)
   | Sreal r ->
       if r < 0.0 then
-	Sreal (ceil r)
+        Sreal (ceil r)
       else
-	Sreal (floor r)
+        Sreal (floor r)
   | _ -> raise (Error "truncate: bad arg type")
 ;;
 
@@ -359,7 +359,7 @@ let snum_atan =
     [| x |] -> rcsw atan atan_cplx x
   | [| y; x |] ->
     Sreal (Complex.arg { Complex.re = float_of_snum x;
-			 Complex.im = float_of_snum y })
+                         Complex.im = float_of_snum y })
   | _ -> raise (Error "atan: bad args")
 ;;
 
@@ -368,14 +368,14 @@ let snum_sqrt =
     Scomplex z -> Scomplex (Complex.sqrt z)
   | x ->
       let r = float_of_snum x in
-	if r < 0.0 then
-	  Scomplex (Complex.sqrt { Complex.re = r; Complex.im = 0.0 })
-	else
-	  let sq = sqrt r in
-	    if is_exact x <> Sfalse && float_is_int sq then
-	      float_to_exact sq
-	    else
-	      Sreal sq
+        if r < 0.0 then
+          Scomplex (Complex.sqrt { Complex.re = r; Complex.im = 0.0 })
+        else
+          let sq = sqrt r in
+            if is_exact x <> Sfalse && float_is_int sq then
+              float_to_exact sq
+            else
+              Sreal sq
 ;;
 
 (* Optimize the simplest cases, leave the rest to Num.  *)
@@ -424,10 +424,10 @@ let quotient n d =
   | _ ->
       let n = float_of_snum n
       and d = float_of_snum d in
-	if not (float_is_int n && float_is_int d) then
-	  raise (Error "quotient: non-integer arguments")
-	else
-	  Sreal (n /. d -. (mod_float n d) /. d)
+        if not (float_is_int n && float_is_int d) then
+          raise (Error "quotient: non-integer arguments")
+        else
+          Sreal (n /. d -. (mod_float n d) /. d)
 ;;
 
 let remainder n d =
@@ -437,17 +437,17 @@ let remainder n d =
       let n = num_of_snum n
       and d = num_of_snum d in
       let m = mod_num n d in
-	if sign_num n + sign_num d = 0 then
-	  snum_of_num (sub_num m d)
-	else
-	  snum_of_num m
+        if sign_num n + sign_num d = 0 then
+          snum_of_num (sub_num m d)
+        else
+          snum_of_num m
   | _ ->
       let n = float_of_snum n
       and d = float_of_snum d in
-	if not (float_is_int n && float_is_int d) then
-	  raise (Error "quotient: non-integer arguments")
-	else
-	  Sreal (mod_float n d)
+        if not (float_is_int n && float_is_int d) then
+          raise (Error "quotient: non-integer arguments")
+        else
+          Sreal (mod_float n d)
 ;;
 
 let modulo n d =
@@ -458,14 +458,14 @@ let modulo n d =
   | _ ->
       let n = float_of_snum n
       and d = float_of_snum d in
-	if not (float_is_int n && float_is_int d) then
-	  raise (Error "quotient: non-integer arguments")
-	else
-	  let m = mod_float n d in
-	    if (n < 0.0 && d > 0.0) || (n > 0.0 && d < 0.0) then
-	      Sreal (d +. m)
-	    else
-	      Sreal m
+        if not (float_is_int n && float_is_int d) then
+          raise (Error "quotient: non-integer arguments")
+        else
+          let m = mod_float n d in
+            if (n < 0.0 && d > 0.0) || (n > 0.0 && d < 0.0) then
+              Sreal (d +. m)
+            else
+              Sreal m
 ;;
 
 (* Compute the gcd of two numbers *)
@@ -473,12 +473,12 @@ let rec gcd2 a b =
   match (a, b) with
     ((Sint _ | Sbigint _), (Sint _ | Sbigint _)) ->
       bigint_res (gcd_big_int (bigint_of_snum (snum_abs a))
-			      (bigint_of_snum (snum_abs b)))
+                              (bigint_of_snum (snum_abs b)))
   | _ ->
       if is_integer a <> Sfalse && is_integer b <> Sfalse then
-	to_inexact (gcd2 (to_exact a) (to_exact b))
+        to_inexact (gcd2 (to_exact a) (to_exact b))
       else
-	raise (Error "gcd: non-integer arguments")
+        raise (Error "gcd: non-integer arguments")
 ;;
 
 let snum_gcd av =
@@ -512,21 +512,21 @@ let simplest_rational x y =
     let fx = snum_floor x
     and fy = snum_floor y in
       if cmp2 false fx x >= 0 then
-	fx
+        fx
       else if cmp2 true fx fy = 0 then
-	add2 fx
-	  (div2 one (sri (div2 one (sub2 y fy)) (div2 one (sub2 x fx))))
+        add2 fx
+          (div2 one (sri (div2 one (sub2 y fy)) (div2 one (sub2 x fx))))
       else
-	add2 fx one
+        add2 fx one
   in
     if cmp2 false y x < 0 then
       sri y x
     else if cmp2 false x y >= 0 then
       begin
-	if is_rational x <> Sfalse then
-	  x
-	else
-	  raise (Error "rationalize: not a rational")
+        if is_rational x <> Sfalse then
+          x
+        else
+          raise (Error "rationalize: not a rational")
       end
     else if is_positive x <> Sfalse then
       sri x y
@@ -557,7 +557,7 @@ let rec snum_denominator =
   | Srational q -> bigint_res (denominator_ratio q)
   | Sreal r as x ->
       if r = 0.0 then Sreal 1.0 else
-	to_inexact (snum_denominator (to_exact x))
+        to_inexact (snum_denominator (to_exact x))
   | Scomplex _ -> raise (Error "denominator: not defined for complex numbers")
   | _ -> raise (Error "denominator: not a numeric type")
 ;;

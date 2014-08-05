@@ -14,7 +14,7 @@ let make_vector av =
     (1 | 2) as n ->
       let size = get_int av.(0)
       and fill = if n = 2 then av.(1) else Snull in
-	Svector (Array.make size fill)
+        Svector (Array.make size fill)
   | _ -> raise (Error "make-vector: wrong number of args")
 
 let vector_of v =
@@ -43,11 +43,11 @@ let vector_to_list =
   function
     Svector v ->
       begin
-	let rec loop i r =
-	  if i < 0 then r
-	  else loop (i - 1) (Spair { car = v.(i); cdr = r })
-	in
-	  loop (Array.length v - 1) Snull
+        let rec loop i r =
+          if i < 0 then r
+          else loop (i - 1) (Spair { car = v.(i); cdr = r })
+        in
+          loop (Array.length v - 1) Snull
       end
   | _ -> raise (Error "vector->list: bad args")
 ;;
@@ -56,7 +56,7 @@ let vector_fill sv v =
   match sv with
     Svector vec ->
       for i = 0 to Array.length vec - 1 do
-	vec.(i) <- v
+        vec.(i) <- v
       done;
       Sunspec
   | _ -> raise (Error "vector-fill!: bad args")

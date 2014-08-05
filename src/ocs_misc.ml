@@ -57,21 +57,21 @@ let rec test_equal a b =
   else
     match (a, b) with
       (Svector v1, Svector v2) ->
-	  let n = Array.length v1 in
-	    if Array.length v2 <> n then
-	      false
-	    else
-	      let rec loop i =
-		if i >= n then
-		  true
-		else
-		  if test_equal v1.(i) v2.(i) then
-		    loop (i + 1)
-		  else
-		    false
-	      in
-		loop 0
+          let n = Array.length v1 in
+            if Array.length v2 <> n then
+              false
+            else
+              let rec loop i =
+                if i >= n then
+                  true
+                else
+                  if test_equal v1.(i) v2.(i) then
+                    loop (i + 1)
+                  else
+                    false
+              in
+                loop 0
     | (Spair p1, Spair p2) ->
-	test_equal p1.car p2.car && test_equal p1.cdr p2.cdr
+        test_equal p1.car p2.car && test_equal p1.cdr p2.cdr
     | _ -> test_eqv a b
 ;;

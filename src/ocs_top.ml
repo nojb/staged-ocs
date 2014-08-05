@@ -51,19 +51,19 @@ let top_loop env th =
       Ocs_port.puts outp "> ";
       Ocs_port.flush outp;
       try
-	match Ocs_read.read_expr lex with
-	  Seof -> ()
-	| v ->
-	    let c = compile env v in
-	      eval th (function Sunspec -> ()
-		| r ->
-		  print outp false r;
-		  Ocs_port.putc outp '\n') c;
-	      loop ()
+        match Ocs_read.read_expr lex with
+          Seof -> ()
+        | v ->
+            let c = compile env v in
+              eval th (function Sunspec -> ()
+                | r ->
+                  print outp false r;
+                  Ocs_port.putc outp '\n') c;
+              loop ()
       with Error err | ErrorL (_, err) ->
-	Ocs_port.puts errp ("Error: " ^ err ^ "\n");
-	Ocs_port.flush errp;
-	loop ()
+        Ocs_port.puts errp ("Error: " ^ err ^ "\n");
+        Ocs_port.flush errp;
+        loop ()
     in
       loop ()
 ;;
