@@ -145,21 +145,23 @@ let rec stage th cc =
                         Sfalse -> .~(stage th (fun x -> .< cc .~x >.) fx)
                       | _ -> .~(stage th (fun x -> .< cc .~x >.) tx) >.)
                 c) >.
-  (* | Csetg (g, c) -> *)
-  (*     eval th (fun v -> *)
-  (*       if g.g_val == Sunbound then *)
-  (*         raise (Error ("set!: unbound variable: " ^ (sym_name g.g_sym))) *)
-  (*       else *)
-  (*         g.g_val <- v; cc Sunspec) c *)
+  | Csetg (g, c) ->
+      stage th (fun v ->
+          let err = "set!: unbound variable " ^ (sym_name g.g_sym) in
+            .< if g.g_val == Sunbound then
+                 raise (Error err)
+               else
+                 let () = g.g_val <- .~v in .~(cc .< Sunspec >.) >.) c
   (* | Csetl (d, i, c) -> *)
   (*     eval th (fun v -> setl th d i v; cc Sunspec) c *)
-  (* | Cdefine (g, c) -> *)
-  (*     eval th (fun v -> g.g_val <- v; cc Sunspec) c *)
-  (* | Cgetg g -> *)
-  (*     if g.g_val == Sunbound then *)
-  (*       raise (Error ("unbound variable: " ^ (sym_name g.g_sym))) *)
-  (*     else *)
-  (*       cc g.g_val *)
+  | Cdefine (g, c) ->
+      stage th (fun v -> .< let () = g.g_val <- .~v in .~(cc .< Sunspec >.) >.) c
+  | Cgetg g ->
+      let err = "unbound variable: " ^ (sym_name g.g_sym) in
+        .< if g.g_val == Sunbound then
+             raise (Error err)
+           else
+             .~(cc .< g.g_val >.) >.
   (* | Cgetl (d, i) -> cc (getl th d i) *)
   (* | Capply0 c -> *)
   (*     eval th (fun cv -> *)
