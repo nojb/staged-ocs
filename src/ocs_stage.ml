@@ -93,28 +93,30 @@ let rec stage th cc =
             stage th (fun v -> .< let _ = .~v in .~(loop (i + 1)) >.) s.(i)
         in
           loop 0
-  (* | Cand2 (s1, s2) -> *)
-  (*     eval th (function Sfalse -> cc Sfalse | _ -> eval th cc s2) s1 *)
-  (* | Cand3 (s1, s2, s3) -> *)
-  (*     eval th *)
-  (*       (function *)
-  (*         Sfalse -> cc Sfalse *)
-  (*       | _ -> *)
-  (*           eval th *)
-  (*             (function *)
-  (*               Sfalse -> cc Sfalse *)
-  (*             | _ -> eval th cc s3) s2) s1 *)
-  (* | Candn s -> *)
-  (*     let n = Array.length s in *)
-  (*       let rec loop i = *)
-  (*         begin *)
-  (*           if i = n - 1 then *)
-  (*             eval th cc s.(i) *)
-  (*           else *)
-  (*             eval th (function Sfalse -> cc Sfalse | _ -> loop (i + 1)) s.(i) *)
-  (*         end *)
-  (*       in *)
-  (*         loop 0 *)
+  | Cand2 (s1, s2) ->
+      stage th cc (Candn [| s1; s2 |])
+  | Cand3 (s1, s2, s3) ->
+      stage th cc (Candn [| s1; s2; s3 |])
+  | Candn s ->
+      let n = Array.length s in
+        .< let cc x = .~(cc .< x >.) in
+             .~begin
+               let cc x = .< cc .~x >. in
+               let rec loop i =
+                 begin
+                   if i = n - 1 then
+                     stage th cc s.(i)
+                   else
+                     stage th
+                       (fun v ->
+                          .< match .~v with
+                               Sfalse -> .~(cc .< Sfalse >.)
+                             | _ -> .~(loop (i + 1)) >.)
+                       s.(i)
+                 end
+               in
+                 loop 0
+             end >.
   (* | Cor2 (s1, s2) -> *)
   (*     eval th (function Sfalse -> eval th cc s2 | x -> cc x) s1 *)
   (* | Cor3 (s1, s2, s3) -> *)
