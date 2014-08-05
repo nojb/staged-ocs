@@ -5,6 +5,7 @@ open Ocs_error
 open Ocs_env
 open Ocs_compile
 open Ocs_eval
+open Ocs_stage
 open Ocs_print
 open Ocs_macro
 
@@ -68,8 +69,39 @@ let top_loop env th =
       loop ()
 ;;
 
+let top_loop_staged env th =
+  let inp = get_port th.th_stdin
+  and outp = get_port th.th_stdout
+  and errp = Ocs_port.output_port stderr in
+  let lex = Ocs_lex.make_lexer inp "" in
+    let rec loop () =
+      Ocs_port.puts outp "> ";
+      Ocs_port.flush outp;
+      try
+        match Ocs_read.read_expr lex with
+          Seof -> ()
+        | v ->
+            let c = compile env v in
+            let cv = stage .<th>. (fun v ->
+                .< match .~v with
+                     Sunspec -> ()
+                   | r ->
+                       print outp false r;
+                       Ocs_port.putc outp '\n' >.) c in
+              Print_code.print_code Format.str_formatter cv;
+              Ocs_port.puts outp (Format.flush_str_formatter ());
+              Runcode.run cv;
+              loop ()
+      with Error err | ErrorL (_, err) ->
+        Ocs_port.puts errp ("Error: " ^ err ^ "\n");
+        Ocs_port.flush errp;
+        loop ()
+    in
+      loop ()
+;;
+
 (* Simple interface to invoke the interactive Scheme environment.  *)
 let interactive () =
-  top_loop (make_env ()) (make_thread ())
+  top_loop_staged (make_env ()) (make_thread ())
 ;;
 
