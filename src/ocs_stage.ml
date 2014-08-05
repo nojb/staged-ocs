@@ -269,28 +269,30 @@ let rec stage th cc =
             stage th (fun h -> stage th (fun t ->
               cc .< Spair { car = .~h; cdr = .~t } >.) t) h
       end
-  (* | Cqqv v -> *)
-  (*     let n = Array.length v in *)
-  (*     let qv = Array.make n Snull in *)
-  (*     let rec loop i = *)
-  (*       if i = n then *)
-  (*         cc (Svector qv) *)
-  (*       else *)
-  (*         eval th (fun x -> qv.(i) <- x; loop (i + 1)) v.(i) *)
-  (*     in *)
-  (*       loop 0 *)
-  (* | Cqqvs l -> *)
-  (*     begin *)
-  (*       let rec loop r = *)
-  (*         function *)
-  (*           [] -> cc (Svector (Array.of_list r)) *)
-  (*         | (Cqqspl x)::t -> *)
-  (*             eval th (fun l -> loop ((list_to_caml l) @ r) t) x *)
-  (*         | h::t -> *)
-  (*             eval th (fun x -> loop (x::r) t) h *)
-  (*       in *)
-  (*         loop [] (List.rev l) *)
-  (*     end *)
+  | Cqqv v ->
+      let n = Array.length v in
+        .< let qv = Array.make n Snull in
+             .~begin
+               let rec loop i =
+                 if i = n then
+                   cc .< Svector qv >.
+                 else
+                   stage th (fun x -> .< let () = qv.(i) <- .~x in .~(loop (i + 1)) >.) v.(i)
+               in
+                 loop 0
+             end >.
+  | Cqqvs l ->
+      begin
+        let rec loop r =
+          function
+            [] -> cc .< Svector (Array.of_list .~r) >.
+          | (Cqqspl x)::t ->
+              stage th (fun l -> loop .< (list_to_caml .~l) @ .~r >. t) x
+          | h::t ->
+              stage th (fun x -> loop .< .~x :: .~r >. t) h
+        in
+          loop .< [] >. (List.rev l)
+      end
   | Cqqspl x -> raise (Error "unquote-splicing: not valid here")
   (* | Ccond av -> *)
   (*     begin *)
