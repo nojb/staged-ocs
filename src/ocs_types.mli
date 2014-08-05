@@ -105,7 +105,7 @@ and primf =
   (* Procedure structure.  *)
 and sproc =
   {
-    proc_body : code;
+    proc_body : scode;
     proc_nargs : int;
     proc_has_rest : bool;
     proc_frame_size : int;
@@ -115,44 +115,44 @@ and sproc =
   (* Delayed expression.  *)
 and spromise =
   {
-    promise_code : code;
+    promise_code : scode;
     mutable promise_val : sval option;
     mutable promise_th : thread option	(* Copy of the thread state *)
   }
 
   (* Code types are used to represent analyzed expressions prepared for
      evaluation.  *)
-and code =
+and scode =
     Cval of sval
-  | Cseq2 of code * code
-  | Cseq3 of code * code * code
-  | Cseqn of code array
-  | Cand2 of code * code
-  | Cand3 of code * code * code
-  | Candn of code array
-  | Cor2 of code * code
-  | Cor3 of code * code * code
-  | Corn of code array
-  | Cif of code * code * code
-  | Csetg of gvar * code
-  | Csetl of int * int * code
-  | Cdefine of gvar * code
+  | Cseq2 of scode * scode
+  | Cseq3 of scode * scode * scode
+  | Cseqn of scode array
+  | Cand2 of scode * scode
+  | Cand3 of scode * scode * scode
+  | Candn of scode array
+  | Cor2 of scode * scode
+  | Cor3 of scode * scode * scode
+  | Corn of scode array
+  | Cif of scode * scode * scode
+  | Csetg of gvar * scode
+  | Csetl of int * int * scode
+  | Cdefine of gvar * scode
   | Cgetg of gvar
   | Cgetl of int * int
-  | Capply0 of code
-  | Capply1 of code * code
-  | Capply2 of code * code * code
-  | Capply3 of code * code * code * code
-  | Capplyn of code * code array
+  | Capply0 of scode
+  | Capply1 of scode * scode
+  | Capply2 of scode * scode * scode
+  | Capply3 of scode * scode * scode * scode
+  | Capplyn of scode * scode array
   | Clambda of sproc
-  | Cqqp of code * code
-  | Cqqv of code array
-  | Cqqvs of code list
-  | Cqqspl of code
-  | Ccond of (code * code) array
-  | Ccondspec of code
-  | Ccase of code * (sval array * code) array
-  | Cdelay of code
+  | Cqqp of scode * scode
+  | Cqqv of scode array
+  | Cqqvs of scode list
+  | Cqqspl of scode
+  | Ccond of (scode * scode) array
+  | Ccondspec of scode
+  | Ccase of scode * (sval array * scode) array
+  | Cdelay of scode
 
   (* Global variable slot.  *)
 and gvar =
@@ -176,7 +176,7 @@ and thread =
 and vbind =
     Vglob of gvar
   | Vloc of int * int
-  | Vsyntax of (env -> sval array -> code)
+  | Vsyntax of (env -> sval array -> scode)
   | Vmacro of (env -> sval array -> sval)
   | Vkeyword of string
 
@@ -194,7 +194,7 @@ and dynext =
   {
     dynext_parent : dynext option;
     dynext_depth : int;
-    dynext_before : thread * code;
-    dynext_after : thread * code
+    dynext_before : thread * scode;
+    dynext_after : thread * scode
   }
 

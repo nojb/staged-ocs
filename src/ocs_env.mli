@@ -18,7 +18,7 @@ val is_a_keyword : env -> sval -> bool
 val is_keyword : env -> sval -> string -> bool
 val safe_is_keyword : env -> sval -> string -> bool
 
-val is_syntax : env -> sval -> (env -> sval array -> code) -> bool
+val is_syntax : env -> sval -> (env -> sval array -> scode) -> bool
 
 val set_pf0 : env -> (unit -> sval) -> string -> unit
 val set_pf1 : env -> (sval -> sval) -> string -> unit
