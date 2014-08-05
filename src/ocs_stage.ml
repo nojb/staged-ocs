@@ -310,33 +310,38 @@ let rec stage th cc =
   (*       in *)
   (*         loop 0 *)
   (*     end *)
-  (* | Ccase (c, m) -> *)
-  (*     eval th (fun v -> *)
-  (*       let n = Array.length m in *)
-  (*       let rec loop i = *)
-  (*         if i < n then *)
-  (*           begin *)
-  (*             match m.(i) with *)
-  (*               ([| |], b) -> eval th cc b *)
-  (*             | (mv, b) -> *)
-  (*                 let n = Array.length mv in *)
-  (*                 let rec has i = *)
-  (*                   if i < n then *)
-  (*                     begin *)
-  (*                       let mvv = mv.(i) in *)
-  (*                         if mvv == v || test_eqv mvv v then true *)
-  (*                         else has (i + 1) *)
-  (*                     end *)
-  (*                   else *)
-  (*                     false *)
-  (*                 in *)
-  (*                   if has 0 then eval th cc b *)
-  (*                   else loop (i + 1) *)
-  (*           end *)
-  (*         else *)
-  (*           cc Sunspec *)
-  (*       in *)
-  (*         loop 0) c *)
+  | Ccase (c, m) ->
+      stage th
+        (fun v ->
+           let n = Array.length m in
+             .< let cc x = .~(cc .< x >.) in
+                let v = .~v in
+                  .~begin
+                    let rec loop i =
+                      if i < n then
+                        begin
+                          match m.(i) with
+                            ([| |], b) -> stage th (fun x -> .< cc .~x >.) b
+                          | (mv, b) ->
+                              let n = Array.length mv in
+                              let rec has i =
+                                let mvv = mv.(i) in
+                                  if i < n - 1 then
+                                    begin
+                                      let mvv = mv.(i) in
+                                        .< mvv == v || test_eqv mvv v || .~(has (i+1)) >.
+                                    end
+                                  else
+                                    .< mvv == v || test_eqv mvv v >.
+                              in
+                                .< if .~(has 0) then .~(stage th (fun x -> .< cc .~x >.) b)
+                                   else .~(loop (i + 1)) >.
+                        end
+                      else
+                        .< cc Sunspec >.
+                    in
+                      loop 0
+                  end >.) c
   (* | Cdelay c -> *)
   (*     cc (Spromise { promise_code = c; *)
   (*                    promise_val = None; *)
