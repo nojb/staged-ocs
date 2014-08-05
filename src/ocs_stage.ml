@@ -101,41 +101,42 @@ let rec stage th cc =
       let n = Array.length s in
         .< let cc x = .~(cc .< x >.) in
              .~begin
-               let cc x = .< cc .~x >. in
                let rec loop i =
                  begin
                    if i = n - 1 then
-                     stage th cc s.(i)
+                     stage th (fun x -> .< cc .~x >.) s.(i)
                    else
                      stage th
                        (fun v ->
                           .< match .~v with
-                               Sfalse -> .~(cc .< Sfalse >.)
+                               Sfalse -> cc Sfalse
                              | _ -> .~(loop (i + 1)) >.)
                        s.(i)
                  end
                in
                  loop 0
              end >.
-  (* | Cor2 (s1, s2) -> *)
-  (*     eval th (function Sfalse -> eval th cc s2 | x -> cc x) s1 *)
-  (* | Cor3 (s1, s2, s3) -> *)
-  (*     eval th *)
-  (*       (function *)
-  (*         Sfalse -> eval th *)
-  (*                     (function *)
-  (*                       Sfalse -> eval th cc s3 *)
-  (*                     | x -> cc x) s2 *)
-  (*       | x -> cc x) s1 *)
-  (* | Corn s -> *)
-  (*     let n = Array.length s in *)
-  (*       let rec loop i = *)
-  (*         if i = n - 1 then *)
-  (*           eval th cc s.(i) *)
-  (*         else *)
-  (*           eval th (function Sfalse -> loop (i + 1) | x -> cc x) s.(i) *)
-  (*       in *)
-  (*         loop 0 *)
+  | Cor2 (s1, s2) ->
+      stage th cc (Corn [| s1; s2 |])
+  | Cor3 (s1, s2, s3) ->
+      stage th cc (Corn [| s1; s2; s3 |])
+  | Corn s ->
+      let n = Array.length s in
+        .< let cc x = .~(cc .< x >.) in
+             .~begin
+               let rec loop i =
+                 if i = n - 1 then
+                   stage th (fun x -> .< cc .~x >.) s.(i)
+                 else
+                   stage th
+                     (fun v ->
+                        .< match .~v with
+                             Sfalse -> .~(loop (i + 1))
+                           | x -> cc x >.)
+                     s.(i)
+               in
+                 loop 0
+             end >.
   (* | Cif (c, tx, fx) -> *)
   (*     eval th *)
   (*       (function Sfalse -> eval th cc fx | _ -> eval th cc tx) *)
