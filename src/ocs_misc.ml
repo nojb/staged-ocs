@@ -23,16 +23,6 @@ let make_slist tl l =
     loop tl l
 ;;
 
-(* Create one of Capply[0123n] depending on the number of arguments.  *)
-let mkapply f av =
-  match av with
-    [| |] -> Capply0 (f)
-  | [| a1 |] -> Capply1 (f, a1)
-  | [| a1; a2 |] -> Capply2 (f, a1, a2)
-  | [| a1; a2; a3 |] -> Capply3 (f, a1, a2, a3)
-  | av -> Capplyn (f, av)
-;;
-
 (* Test equivalence (as in eqv?) *)
 
 let test_eqv a b =

@@ -80,11 +80,9 @@ let chkargs p n =
 let rec stage th cc =
   function
     Cval v -> cc .< v >.
-  | Cseq2 (s1, s2) ->
-      stage th cc (Cseqn [| s1; s2 |])
-  | Cseq3 (s1, s2, s3) ->
-      stage th cc (Cseqn [| s1; s2; s3 |])
-  | Cseqn s ->
+  | Cseq [| |] ->
+      cc .< Sunspec >.
+  | Cseq s ->
       let n = Array.length s in
         let rec loop i =
           if i = n - 1 then
@@ -93,11 +91,9 @@ let rec stage th cc =
             stage th (fun v -> .< let _ = .~v in .~(loop (i + 1)) >.) s.(i)
         in
           loop 0
-  | Cand2 (s1, s2) ->
-      stage th cc (Candn [| s1; s2 |])
-  | Cand3 (s1, s2, s3) ->
-      stage th cc (Candn [| s1; s2; s3 |])
-  | Candn s ->
+  | Cand [| |] ->
+      cc .< Strue >.
+  | Cand s ->
       let n = Array.length s in
         .< let cc x = .~(cc .< x >.) in
              .~begin
@@ -116,11 +112,9 @@ let rec stage th cc =
                in
                  loop 0
              end >.
-  | Cor2 (s1, s2) ->
-      stage th cc (Corn [| s1; s2 |])
-  | Cor3 (s1, s2, s3) ->
-      stage th cc (Corn [| s1; s2; s3 |])
-  | Corn s ->
+  | Cor [| |] ->
+      cc .< Sfalse >.
+  | Cor s ->
       let n = Array.length s in
         .< let cc x = .~(cc .< x >.) in
              .~begin

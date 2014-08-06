@@ -410,7 +410,7 @@ let mklet_syntax e args =
               (Array.of_list (list_to_caml args.(0))) in
   let ne = new_scope e in
     Array.iter (fun (s, r) -> bind_name ne s r) av;
-    mkseq (mkbody ne (Array.sub args 1 (Array.length args - 1)))
+    Cseq (mkbody ne (Array.sub args 1 (Array.length args - 1)))
 ;;
 
 let mkletrec_syntax e args =
@@ -426,7 +426,7 @@ let mkletrec_syntax e args =
       (Array.of_list (list_to_caml args.(0)))
   in
     Array.iter (fun (r, s, v) -> r.r_rules <- parsetspec (new_scope e) s v) t;
-    mkseq (mkbody ne (Array.sub args 1 (Array.length args - 1)))
+    Cseq (mkbody ne (Array.sub args 1 (Array.length args - 1)))
 ;;
 
 let bind_macro e =

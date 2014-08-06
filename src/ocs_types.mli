@@ -124,26 +124,16 @@ and spromise =
      evaluation.  *)
 and scode =
     Cval of sval
-  | Cseq2 of scode * scode
-  | Cseq3 of scode * scode * scode
-  | Cseqn of scode array
-  | Cand2 of scode * scode
-  | Cand3 of scode * scode * scode
-  | Candn of scode array
-  | Cor2 of scode * scode
-  | Cor3 of scode * scode * scode
-  | Corn of scode array
+  | Cseq of scode array
+  | Cand of scode array
+  | Cor of scode array
   | Cif of scode * scode * scode
   | Csetg of gvar * scode
   | Csetl of int * int * scode
   | Cdefine of gvar * scode
   | Cgetg of gvar
   | Cgetl of int * int
-  | Capply0 of scode
-  | Capply1 of scode * scode
-  | Capply2 of scode * scode * scode
-  | Capply3 of scode * scode * scode * scode
-  | Capplyn of scode * scode array
+  | Capply of scode * scode array
   | Clambda of sproc
   | Cqqp of scode * scode
   | Cqqv of scode array

@@ -52,33 +52,6 @@ let genref =
   | Vkeyword _ -> Cval Sunbound
 ;;
 
-let mkseq s =
-  match Array.length s with
-    0 -> Cval Sunspec
-  | 1 -> s.(0)
-  | 2 -> Cseq2 (s.(0), s.(1))
-  | 3 -> Cseq3 (s.(0), s.(1), s.(2))
-  | _ -> Cseqn s
-;;
-
-let mkand s =
-  match Array.length s with
-    0 -> Cval Strue
-  | 1 -> s.(0)
-  | 2 -> Cand2 (s.(0), s.(1))
-  | 3 -> Cand3 (s.(0), s.(1), s.(2))
-  | _ -> Candn s
-;;
-
-let mkor s =
-  match Array.length s with
-    0 -> Cval Sfalse
-  | 1 -> s.(0)
-  | 2 -> Cor2 (s.(0), s.(1))
-  | 3 -> Cor3 (s.(0), s.(1), s.(2))
-  | _ -> Corn s
-;;
-
 let make_proc c n hr fs =
   { proc_body = c;
     proc_nargs = n;
@@ -238,7 +211,7 @@ and mklambda e args body =
     in
       scanargs args;
       let body =
-        mkseq (mkbody ne (Array.sub body 1 (Array.length body - 1)))
+        Cseq (mkbody ne (Array.sub body 1 (Array.length body - 1)))
       in
         Clambda (make_proc body !nargs !has_rest !(ne.env_frame_size))
 
@@ -258,18 +231,18 @@ and mknamedlet e s args =
     bind_name ne s ar;
     let av =
       Array.map (fun (s, v) -> let _ = bind_var ne s in v) argv in
-    let body = mkseq (mkbody ne (Array.sub args 2 (Array.length args - 2))) in
+    let body = Cseq (mkbody ne (Array.sub args 2 (Array.length args - 2))) in
     let proc =
       Clambda (make_proc body (Array.length av) false !(ne.env_frame_size))
     in
-      Cseq2 (gendef ar proc, mkapply (genref ar) av)
+      Cseq [| gendef ar proc; Capply (genref ar, av) |]
 
 and mklet e args =
   if Array.length args < 2 then
     raise (Error "let: too few args");
   match args.(0) with
     (Ssymbol _ | Sesym (_, _)) as s -> mknamedlet e s args
-  | Snull -> mkseq (mkbody e (Array.sub args 1 (Array.length args - 1)))
+  | Snull -> Cseq (mkbody e (Array.sub args 1 (Array.length args - 1)))
   | Spair _ as al ->
       let argv =
         Array.map
@@ -277,11 +250,11 @@ and mklet e args =
           (Array.of_list (list_to_caml al)) in
       let ne = new_frame e in
       let av = Array.map (fun (s, v) -> let _ = bind_var ne s in v) argv in
-      let body = mkseq (mkbody ne (Array.sub args 1 (Array.length args - 1))) in
+      let body = Cseq (mkbody ne (Array.sub args 1 (Array.length args - 1))) in
       let proc =
         Clambda (make_proc body (Array.length av) false !(ne.env_frame_size))
       in
-        mkapply proc av
+        Capply (proc, av)
   | _ -> raise (Error "let: missing argument list")
 
 and mkletstar e args =
@@ -295,8 +268,8 @@ and mkletstar e args =
         let _ = bind_var ne s in
         let body = build ne t in
         let proc = Clambda (make_proc body 1 false !(ne.env_frame_size)) in
-          mkapply proc [| v |]
-    | [] -> mkseq (mkbody e (Array.sub args 1 (Array.length args - 1)))
+          Capply (proc, [| v |])
+    | [] -> Cseq (mkbody e (Array.sub args 1 (Array.length args - 1)))
   in
     build e (list_to_caml args.(0))
 
@@ -310,18 +283,18 @@ and mkletrec e args =
   let avi = Array.map (fun (r, v) -> compile ne v) av in
   let ne' = new_frame ne in
   let sets = Array.map (fun (r, v) -> gendef r (genref (new_var ne'))) av in
-  let body = mkseq (Array.append sets
+  let body = Cseq (Array.append sets
     (mkbody ne' (Array.sub args 1 (Array.length args - 1)))) in
   let proc =
     Clambda (make_proc body (Array.length av) false !(ne'.env_frame_size)) in
   let proc =
-    Clambda (make_proc (mkapply proc avi)
+    Clambda (make_proc (Capply (proc, avi))
                        (Array.length av) false !(ne.env_frame_size))
   in
-    mkapply proc (Array.map (fun _ -> Cval Sunspec) av)
+    Capply (proc, Array.map (fun _ -> Cval Sunspec) av)
 
 and compileseq e s =
-  mkseq (Array.map (fun x -> compile e x)
+  Cseq (Array.map (fun x -> compile e x)
                    (Array.of_list (list_to_caml s)))
 
 and mkcond e args =
@@ -371,17 +344,17 @@ and mkdo e args =
                           let _ = bind_var ne sym in init) vv in
     let body =
       Cif (compile ne test, compileseq ne result,
-           mkseq 
+           Cseq 
             (Array.append
               (Array.map (fun x -> compile ne x)
                          (Array.sub args 2 (Array.length args - 2)))
-              [| mkapply (genref anonvar)
-                 (Array.map (fun (_, _, step) -> compile ne step) vv) |]))
+              [| Capply (genref anonvar,
+                         Array.map (fun (_, _, step) -> compile ne step) vv) |]))
     in
       let proc =
         Clambda (make_proc body (Array.length av) false !(ne.env_frame_size))
       in
-        Cseq2 (gendef anonvar proc, mkapply (genref anonvar) av)
+        Cseq [| gendef anonvar proc; Capply (genref anonvar, av) |]
 
 and mkdelay e =
   function
@@ -429,7 +402,7 @@ and applysym e s args =
   match get_var e s with
     Vsyntax f -> f e args
   | Vmacro f -> compile e (f e args)
-  | r -> mkapply (genref r) (Array.map (fun x -> compile e x) args)
+  | r -> Capply (genref r, Array.map (fun x -> compile e x) args)
 
 and compile e =
   function
@@ -440,12 +413,12 @@ and compile e =
           match p.car with
             (Ssymbol _ | Sesym (_, _)) as s -> applysym e s args
           | x ->
-              mkapply (compile e x) (Array.map (fun x -> compile e x) args)
+              Capply (compile e x, Array.map (fun x -> compile e x) args)
         end
   | x -> Cval (scanquoted x)
 
 and mkbegin e args =
-  mkseq (Array.map (fun x -> compile e x) args)
+  Cseq (Array.map (fun x -> compile e x) args)
 ;;
 
 let bind_lang e =
@@ -460,8 +433,8 @@ let bind_lang e =
       sym_case, mkcase;
       sym_do, mkdo;
       sym_begin, mkbegin;
-      sym_and, (fun e args -> mkand (Array.map (fun x -> compile e x) args));
-      sym_or, (fun e args -> mkor (Array.map (fun x -> compile e x) args));
+      sym_and, (fun e args -> Cand (Array.map (fun x -> compile e x) args));
+      sym_or, (fun e args -> Cor (Array.map (fun x -> compile e x) args));
       sym_lambda,
         (fun e args ->
           if Array.length args >= 1 then

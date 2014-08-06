@@ -8,6 +8,5 @@ val bind_lang : env -> unit
 
 (* Internal, used by ocs_macro *)
 val letsplit : (sval -> sval -> 'a) -> sval -> 'a
-val mkseq : scode array -> scode
 val mkbody : env -> sval array -> scode array
 
