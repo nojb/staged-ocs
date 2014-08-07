@@ -7,3 +7,4 @@ _build
 *.a
 ocscm
 ocscm-bc
+staged_ocscm

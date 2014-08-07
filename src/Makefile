@@ -12,7 +12,7 @@ BC_OBJS = ocs_error.cmo ocs_port.cmo ocs_vartable.cmo ocs_sym.cmo \
 	ocs_vector.cmo ocs_wrap.cmo ocs_top.cmo
 
 BCI_OBJS = ocs_main.cmo
-BCI = ocscm
+BCI = staged_ocscm
 
 all: $(BCI)
 
