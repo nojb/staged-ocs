@@ -3,7 +3,7 @@
 open Ocs_types
 open Ocs_error
 open Ocs_env
-(* open Ocs_eval *)
+open Ocs_stage
 open Ocs_print
 
 let get_stdin th =
@@ -155,41 +155,27 @@ let scm_close_port p =
    for this because closing and reopening the file would be an even
    bigger problem.  *)
 
-(* let call_w_in th cc = *)
-(*   function *)
-(*     [| name; proc |] -> *)
-(*       let p = open_input_file name in *)
-(*         eval th (fun x -> close_port p; cc x) (Capply1 (Cval proc, Cval p)) *)
-(*   | _ -> raise (Error "call-with-input-file: bad args") *)
-(* ;; *)
+let call_w_in name proc th cc =
+  let p = open_input_file name in
+    doapply th (fun x -> close_port p; cc x) proc [p]
+;;
 
-(* let call_w_out th cc = *)
-(*   function *)
-(*     [| name; proc |] -> *)
-(*       let p = open_output_file name in *)
-(*         eval th (fun x -> close_port p; cc x) (Capply1 (Cval proc, Cval p)) *)
-(*   | _ -> raise (Error "call-with-output-file: bad args") *)
-(* ;; *)
+let call_w_out name proc th cc =
+  let p = open_output_file name in
+    doapply th (fun x -> close_port p; cc x) proc [p]
+;;
 
-(* let w_in th cc = *)
-(*   function *)
-(*     [| name; thunk |] -> *)
-(*       let p = open_input_file name in *)
-(*         eval { th with th_stdin = p } *)
-(*              (fun x -> close_port p; cc x) *)
-(*              (Capply0 (Cval thunk)) *)
-(*   | _ -> raise (Error "with-input-from-file: bad args") *)
-(* ;; *)
+let w_in name thunk th cc =
+  let p = open_input_file name in
+    doapply { th with th_stdin = p }
+      (fun x -> close_port p; cc x) thunk []
+;;
 
-(* let w_out th cc = *)
-(*   function *)
-(*     [| name; thunk |] -> *)
-(*       let p = open_output_file name in *)
-(*         eval { th with th_stdout = p } *)
-(*              (fun x -> close_port p; cc x) *)
-(*              (Capply0 (Cval thunk)) *)
-(*   | _ -> raise (Error "with-output-to-file: bad args") *)
-(* ;; *)
+let w_out name thunk th cc =
+  let p = open_output_file name in
+    doapply { th with th_stdout = p }
+      (fun x -> close_port p; cc x) thunk []
+;;
 
 let init e =
   set_pfcn e read "read";
@@ -216,9 +202,9 @@ let init e =
   set_pf1 e scm_close_port "close-input-port";
   set_pf1 e scm_close_port "close-output-port";
 
-  (* set_pfcn e call_w_in "call-with-input-file"; *)
-  (* set_pfcn e call_w_out "call-with-output-file"; *)
+  set_pfg e (Pfix (Pfix (Pthread Pcont))) call_w_in "call-with-input-file";
+  set_pfg e (Pfix (Pfix (Pthread Pcont))) call_w_out "call-with-output-file";
 
-  (* set_pfcn e w_in "with-input-from-file"; *)
-  (* set_pfcn e w_out "with-output-to-file"; *)
+  set_pfg e (Pfix (Pfix (Pthread Pcont))) w_in "with-input-from-file";
+  set_pfg e (Pfix (Pfix (Pthread Pcont))) w_out "with-output-to-file";
 ;;
