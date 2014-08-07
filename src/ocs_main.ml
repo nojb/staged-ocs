@@ -7,9 +7,10 @@ let main () =
   let loadf = ref [] in
   let addf x = loadf := !loadf @ [x] in
   let argspec = [
+    ("-dstaged", Arg.Set Ocs_top.dstaged, "Dump staged code in interactive mode");
     ("file", Arg.Rest addf, "Files to run in batch mode")
   ] in
-    Arg.parse argspec addf "Usage: ocscm [ file ... ]";
+    Arg.parse argspec addf (Printf.sprintf "Usage: %s [-dstaged] [ file ... ]" Sys.argv.(0));
     if !loadf = [] then
       Ocs_top.interactive ()
     else

@@ -8,6 +8,8 @@ open Ocs_stage
 open Ocs_print
 open Ocs_macro
 
+let dstaged = ref false
+
 (* Create a top-level environment and bind standard primitives.  *)
 let make_env () =
   let e = top_env () in
@@ -57,9 +59,12 @@ let top_loop env th =
                    | r ->
                        print outp false r;
                        Ocs_port.putc outp '\n' >.) c in
-              Print_code.print_code Format.str_formatter cv;
-              Ocs_port.puts outp (Format.flush_str_formatter ());
-              Ocs_port.flush outp;
+              if !dstaged then
+                begin
+                  Print_code.print_code Format.str_formatter cv;
+                  Ocs_port.puts outp (Format.flush_str_formatter ());
+                  Ocs_port.flush outp
+                end;
               Runcode.run cv;
               loop ()
       with Error err | ErrorL (_, err) ->

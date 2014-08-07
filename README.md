@@ -56,10 +56,12 @@ This should produce a stand-alone, bytecode interpreter (`staged_ocscm`).
 
 ## The 'staged_ocscm' command
 
-If invoked without arguments, the interpreter will run in interactive mode.
+Execute `staged_ocscm` to run the interpreter in interactive mode.  If you want
+to see the generated OCaml code, run `staged_ocscm -dstaged`.
 
 If invoked with arguments, the interpreter will read and evaluate the files
-listed as arguments and exit.  The evaluation results are not printed.
+listed as arguments and exit.  The evaluation results (and the intermediate
+OCaml) are not printed.
 
 ## Implementation Details
 
