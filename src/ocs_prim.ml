@@ -3,7 +3,7 @@
 open Ocs_types
 open Ocs_error
 open Ocs_env
-(* open Ocs_eval *)
+open Ocs_stage
 open Ocs_misc
 open Ocs_sym
 open Ocs_io
@@ -136,58 +136,58 @@ let is_equal a b =
 (*   | _ -> raise (Error "force: bad args") *)
 (* ;; *)
 
-(* let map_for_each th cc av is_map = *)
-(*   let my_name = if is_map then "map" else "for-each" *)
-(*   and na = Array.length av - 1 in *)
-(*     if na <= 0 then *)
-(*       raise (Error (my_name ^ ": bad args")); *)
-(*     let proc = av.(0) *)
-(*     and get_cdr = *)
-(*       function *)
-(*         Spair { car = _; cdr = t } -> t *)
-(*       | _ -> raise (Error (my_name ^ ": list lengths don't match")) *)
-(*     and get_carc = *)
-(*       function *)
-(*         Spair { car = h; cdr = _ } -> Cval h *)
-(*       | _ -> raise (Error (my_name ^ ": list lengths don't match")) *)
-(*     and result = ref (if is_map then Snull else Sunspec) *)
-(*     and rtail = ref Snull in *)
-(*     let append v = *)
-(*       if !rtail == Snull then *)
-(*         begin *)
-(*           result := Spair { car = v; cdr = Snull }; *)
-(*           rtail := !result; *)
-(*         end *)
-(*       else *)
-(*         begin *)
-(*           match !rtail with *)
-(*             Spair p -> *)
-(*               p.cdr <- Spair { car = v; cdr = Snull }; *)
-(*               rtail := p.cdr *)
-(*           | _ -> assert false *)
-(*         end *)
-(*     in *)
-(*       let rec loop args = *)
-(*         match args.(0) with *)
-(*           Snull -> cc !result *)
-(*         | Spair _ -> *)
-(*             eval th *)
-(*               (fun v -> *)
-(*                 if is_map then append v; *)
-(*                 loop (Array.map get_cdr args)) *)
-(*               (mkapply (Cval proc) (Array.map get_carc args)) *)
-(*         | _ -> raise (Error (my_name ^ ": invalid argument lists")) *)
-(*       in *)
-(*         loop (Array.sub av 1 na) *)
-(* ;; *)
+let map_for_each av cc is_map =
+  let my_name = if is_map then "map" else "for-each"
+  and na = Array.length av - 1 in
+    if na <= 0 then
+      raise (Error (my_name ^ ": bad args"));
+    let proc = av.(0)
+    and get_cdr =
+      function
+        Spair { car = _; cdr = t } -> t
+      | _ -> raise (Error (my_name ^ ": list lengths don't match"))
+    and get_carc =
+      function
+        Spair { car = h; cdr = _ } -> h
+      | _ -> raise (Error (my_name ^ ": list lengths don't match"))
+    and result = ref (if is_map then Snull else Sunspec)
+    and rtail = ref Snull in
+    let append v =
+      if !rtail == Snull then
+        begin
+          result := Spair { car = v; cdr = Snull };
+          rtail := !result;
+        end
+      else
+        begin
+          match !rtail with
+            Spair p ->
+              p.cdr <- Spair { car = v; cdr = Snull };
+              rtail := p.cdr
+          | _ -> assert false
+        end
+    in
+      let rec loop args =
+        match args.(0) with
+          Snull -> cc !result
+        | Spair _ ->
+            doapply
+              (fun v ->
+                if is_map then append v;
+                loop (Array.map get_cdr args))
+              proc (Array.to_list (Array.map get_carc args))
+        | _ -> raise (Error (my_name ^ ": invalid argument lists"))
+      in
+        loop (Array.sub av 1 na)
+;;
 
-(* let map th cc av = *)
-(*   map_for_each th cc av true *)
-(* ;; *)
+let map av cc =
+  map_for_each av cc true
+;;
 
-(* let for_each th cc av = *)
-(*   map_for_each th cc av false *)
-(* ;; *)
+let for_each av cc =
+  map_for_each av cc false
+;;
 
 (* let load_file e th name = *)
 (*   let th = { th with th_display = [| |]; th_depth = -1 } *)
@@ -256,8 +256,8 @@ let init e =
 
   (* set_pfcn e force "force"; *)
 
-  (* set_pfcn e map "map"; *)
-  (* set_pfcn e for_each "for-each"; *)
+  set_pfg e (Prest Pcont) map "map";
+  set_pfg e (Prest Pcont) for_each "for-each";
 
   (* set_pfcn e (load_prim e) "load"; *)
   (* set_pfcn e eval_prim "eval"; *)
