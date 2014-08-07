@@ -138,14 +138,14 @@ let is_syntax e sym sf =
   | _ -> false
 ;;
 
-let set_pfg e f n =
-  set_glob e (get_symbol n) (Sprim { prim_fun = f; prim_name = n })
+let set_pfg e sg f n =
+  set_glob e (get_symbol n) (Sproc { proc_name = n; proc_is_prim = true; proc_fun = Pf (sg, f) })
 ;;
 
-let set_pf0 e f n = set_pfg e (Pf0 f) n
-let set_pf1 e f n = set_pfg e (Pf1 f) n
-let set_pf2 e f n = set_pfg e (Pf2 f) n
-let set_pf3 e f n = set_pfg e (Pf3 f) n
-let set_pfn e f n = set_pfg e (Pfn f) n
-let set_pfcn e f n = set_pfg e (Pfcn f) n
+let set_pf0 e f n = set_pfg e (Pvoid Pret) f n
+let set_pf1 e f n = set_pfg e (Pfix Pret) f n
+let set_pf2 e f n = set_pfg e (Pfix (Pfix Pret)) f n
+let set_pf3 e f n = set_pfg e (Pfix (Pfix (Pfix Pret))) f n
+let set_pfn e f n = set_pfg e (Prest Pret) f n
+let set_pfcn e f n = set_pfg e (Prest Pcont) (fun cc a -> f (assert false) a cc) n
 

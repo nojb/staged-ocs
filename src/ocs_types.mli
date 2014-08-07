@@ -50,9 +50,6 @@ type sval =
      local environment at that point of execution.  *)
   | Sproc of sproc
 
-  (* Primitive function.  *)
-  | Sprim of sprim
-
   (* Delayed expression.  *)
   | Spromise of spromise
 
@@ -80,27 +77,27 @@ and spair =
   }
 
   (* Primitive structure.  *)
-and sprim =
-  {
-    prim_fun : primf;
-    prim_name : string
-  }
+(* and sprim = *)
+(*   { *)
+(*     prim_fun : primf; *)
+(*     prim_name : string *)
+(*   } *)
 
-  (* Primitive function types.  *)
-and primf =
-  (* Simple functional interface to primitives with a small, constant
-     number of arguments.  *)
-    Pf0 of (unit -> sval)
-  | Pf1 of (sval -> sval)
-  | Pf2 of (sval -> sval -> sval)
-  | Pf3 of (sval -> sval -> sval -> sval)
+(*   (\* Primitive function types.  *\) *)
+(* and primf = *)
+(*   (\* Simple functional interface to primitives with a small, constant *)
+(*      number of arguments.  *\) *)
+(*     Pf0 of (unit -> sval) *)
+(*   | Pf1 of (sval -> sval) *)
+(*   | Pf2 of (sval -> sval -> sval) *)
+(*   | Pf3 of (sval -> sval -> sval -> sval) *)
 
-  (* Functional interface to primitives with a variable number of arguments.  *)
-  | Pfn of (sval array -> sval)
+(*   (\* Functional interface to primitives with a variable number of arguments.  *\) *)
+(*   | Pfn of (sval array -> sval) *)
 
-  (* Continuation-based interface to primitives, also includes the thread
-     and supports a variable number of arguments.  *)
-  | Pfcn of (thread -> (sval -> unit) -> sval array -> unit)
+(*   (\* Continuation-based interface to primitives, also includes the thread *)
+(*      and supports a variable number of arguments.  *\) *)
+(*   | Pfcn of (thread -> (sval -> unit) -> sval array -> unit) *)
 
 and _ sg =
     Pfix : 'a sg -> (sval -> 'a) sg
@@ -111,14 +108,14 @@ and _ sg =
 
   (* Procedure structure.  *)
 and sproc =
-    Pf : 'a sg * 'a * string -> sproc
-  (* { *)
-  (*   proc_body : scode; *)
-  (*   proc_nargs : int; *)
-  (*   proc_has_rest : bool; *)
-  (*   proc_frame_size : int; *)
-  (*   mutable proc_name : string *)
-  (* } *)
+  {
+    proc_name : string;
+    proc_is_prim : bool;
+    proc_fun : procf
+  }
+
+and procf =
+    Pf : 'a sg * 'a -> procf
 
   (* Delayed expression.  *)
 and spromise =

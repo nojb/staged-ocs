@@ -63,8 +63,8 @@ and print p disp =
   | Spair l -> write_list p disp l
   | Svector v -> write_vector p disp v
   | Sport _ -> Ocs_port.puts p "#<port>"
-  | Sproc _ -> Ocs_port.puts p "#<procedure>"
-  | Sprim { prim_fun = _; prim_name = n } ->
+  | Sproc { proc_is_prim = false } -> Ocs_port.puts p "#<procedure>"
+  | Sproc { proc_name = n; proc_is_prim = true } ->
       Ocs_port.puts p "#<primitive:"; Ocs_port.puts p n; Ocs_port.putc p '>'
   | Spromise _ -> Ocs_port.puts p "#<promise>"
   | Sesym (_, s) -> print p disp s
