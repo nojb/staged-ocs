@@ -267,27 +267,32 @@ let rec stage e cc =
           loop .< [] >. (List.rev l)
       end
   | Cqqspl x -> raise (Error "unquote-splicing: not valid here")
-  (* | Ccond av -> *)
-  (*     begin *)
-  (*       let n = Array.length av in *)
-  (*       let rec loop i = *)
-  (*         if i < n then *)
-  (*           begin *)
-  (*             match av.(i) with *)
-  (*               (Ccondspec c, b) -> *)
-  (*                 eval th (fun v -> *)
-  (*                   if v <> Sfalse then eval th cc (Capply1 (b, Cval v)) *)
-  (*                   else loop (i + 1)) c *)
-  (*             | (c, b) -> *)
-  (*                 eval th (fun v -> *)
-  (*                   if v <> Sfalse then eval th cc b *)
-  (*                   else loop (i + 1)) c *)
-  (*           end *)
-  (*         else *)
-  (*           cc Sunspec *)
-  (*       in *)
-  (*         loop 0 *)
-  (*     end *)
+  | Ccond av ->
+      let n = Array.length av in
+        .< let cc x = .~(cc .<x>.) in
+             .~begin
+               let rec loop i =
+                 if i < n then
+                   begin
+                     match av.(i) with
+                       (Ccondspec c, b) ->
+                         stage e (fun v ->
+                             .< match .~v with
+                                  Sfalse -> .~(loop (i+1))
+                                | _ as v ->
+                                    .~(stage e (fun b -> .< doapply cc .~b [ v ] >.) b) >.)
+                           c
+                     | (c, b) ->
+                         stage e (fun v ->
+                             .< match .~v with
+                                  Sfalse -> .~(loop (i+1))
+                                | _ -> .~(stage e (fun x -> .< cc .~x >.) b) >.) c
+                   end
+                 else
+                   .< cc Sunspec >.
+               in
+                 loop 0
+             end >.
   | Ccase (c, m) ->
       stage e
         (fun v ->
