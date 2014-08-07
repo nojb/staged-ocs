@@ -38,7 +38,7 @@ Anything else that does not work as specified in R5RS is a bug.
 
 Requirements:
 
-- GNU make or pmake (BSD make)
+- GNU make
 - MetaOCaml BER 101 (<http://okmij.org/ftp/ML/MetaOCaml.html>)
 
 In order to install MetaOCaml, the easiest way is to use opam (<https://opam.ocaml.org>).
@@ -52,12 +52,20 @@ Once MetaOCaml is installed, clone the git repository and type make in the `src`
     cd src
     make
  
-This should produce a stand-alone, bytecode interpreter (`staged_ocscm`).
+This should produce a stand-alone, bytecode interpreter (`ocs_main.byte`). **See
+the next section for information on how to run it.**
 
-## The 'staged_ocscm' command
+## The 'ocs_main.byte' command
 
-Execute `staged_ocscm` to run the interpreter in interactive mode.  If you want
-to see the generated OCaml code, run `staged_ocscm -dstaged`.
+**You need to `cd` to the `_build` subdirectory before running the
+  `ocs_main.byte` executable (due to an issue related to how MetaOCaml-generated
+  code works).  This problem should be solved soon.**
+
+    cd _build
+    ./ocs_main.byte [-dstaged]
+
+Execute `ocs_main.byte` to run the interpreter in interactive mode.  If you want
+to see the generated OCaml code, run `ocs_main.byte -dstaged`.
 
 If invoked with arguments, the interpreter will read and evaluate the files
 listed as arguments and exit.  The evaluation results (and the intermediate
@@ -85,7 +93,7 @@ in the module `Ocs_types` are visible.
 
 ## Staging
 
-Scheme values (S-expressions) are of the type sval.
+Scheme values (S-expressions) are of the type `sval`.
 
 Before evaluation Scheme values are compiled to internal representations of the
 type code.  This is done by the function
@@ -129,15 +137,15 @@ representations:
 
 Exact numbers are
 
-- 31- or 63-bit integers (OCaml int)
+- 31- or 63-bit integers (OCaml `int`)
 - `Big_int` objects from the `Num` library when unboxed integers are
   too small
 - `Ratio` objects from the `Num` library for rationals
 
 Inexact numbers are
 
-- 64-bit IEEE floats for reals (OCaml float)
-- Pairs of 64-bit IEEE floats for complex numbers (OCaml Complex.t)
+- 64-bit IEEE floats for reals (OCaml `float`)
+- Pairs of 64-bit IEEE floats for complex numbers (OCaml `Complex.t`)
 
 Since inexact numbers are represented internally as binary floating point,
 conversions to exact numbers are most precise for fractions of powers of two
