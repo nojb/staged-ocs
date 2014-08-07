@@ -191,13 +191,14 @@ let for_each av cc =
 (*   | _ -> raise (Error "load: invalid name argument") *)
 (* ;; *)
 
-(* let eval_prim th cc = *)
-(*   function *)
-(*     [| expr; Sesym (e, _) |] -> *)
-(*       eval { th with th_display = [| |]; th_depth = -1 } cc *)
-(*         (compile e expr) *)
-(*   | _ -> raise (Error "eval: invalid args") *)
-(* ;; *)
+let eval_prim av cc =
+  match av with
+    [| expr; Sesym (e, _) |] ->
+      let c = compile e expr in
+      let sc = stage [] (fun x -> .< cc .~x >.) c in
+        Runcode.run sc
+  | _ -> raise (Error "eval: invalid args")
+;;
 
 let report_env e _ =
   Sesym (env_copy e, Ssymbol "")
@@ -241,7 +242,7 @@ let init e =
   set_pfg e (Prest Pcont) for_each "for-each";
 
   (* set_pfcn e (load_prim e) "load"; *)
-  (* set_pfcn e eval_prim "eval"; *)
+  set_pfg e (Prest Pcont) eval_prim "eval";
 
   set_pf1 e (report_env (env_copy e)) "scheme-report-environment";
   set_pf1 e null_env "null-environment";

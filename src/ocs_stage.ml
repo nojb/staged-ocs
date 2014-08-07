@@ -40,13 +40,13 @@ let rec proc_nargs : type a. a sg -> int = function
   | Pvoid sg -> proc_nargs sg
 ;;
 
-(* let args_err p n = *)
-(*   if p.proc_has_rest then *)
-(*     Printf.sprintf "procedure %s expected %d or more args got %d" *)
-(*       p.proc_name (p.proc_nargs - 1) n *)
-(*   else *)
-(*     Printf.sprintf "procedure %s expected %d args got %d" *)
-(*       p.proc_name p.proc_nargs n *)
+let args_err sg proc_name n =
+  if proc_has_rest sg then
+    Printf.sprintf "procedure %s expected %d or more args got %d"
+      proc_name (proc_nargs sg - 1) n
+  else
+    Printf.sprintf "procedure %s expected %d args got %d"
+      proc_name (proc_nargs sg) n
 
 (* let chkargs p n = *)
 (*   match p with *)
@@ -73,31 +73,37 @@ let rec proc_nargs : type a. a sg -> int = function
 (* ;; *)
 
 let rec doapply (cc : sval -> unit) p av =
-  let rec loop : type a. a sg -> a -> _ -> unit = fun sg f al ->
-    match sg, al with
-      Pfix sg, a :: al ->
-        loop sg (f a) al
-    | Pret, [] ->
-        cc f
-    | Pcont, [] ->
-        f cc
-    | Prests sg, _ ->
-        let rec mkrest = function
-            [] -> Snull
-          | a :: al -> Spair { car = a; cdr = mkrest al }
-        in
-          loop sg (f (mkrest al)) []
-    | Prest sg, _ ->
-        loop sg (f (Array.of_list al)) []
-    | _ ->
-        assert false
-  in
-    match p with
-      Sproc p ->
-        let Pf (sg, f) = p.proc_fun in
-          loop sg f av
-    | _ ->
-        raise (Error "apply: not a procedure or primitive")
+  match p with
+    Sproc p ->
+      let Pf (sg, f) = p.proc_fun in 
+      let rec loop : type a. a sg -> a -> _ -> unit = fun sg f al ->
+        match sg, al with
+          Pfix sg, a :: al ->
+            loop sg (f a) al
+        | Pret, [] ->
+            cc f
+        | Pcont, [] ->
+            f cc
+        | Prests sg, _ ->
+            let rec mkrest = function
+                [] -> Snull
+              | a :: al -> Spair { car = a; cdr = mkrest al }
+            in
+              loop sg (f (mkrest al)) []
+        | Prest sg, _ ->
+            loop sg (f (Array.of_list al)) []
+        | Pvoid sg, _ ->
+            loop sg (f ()) al
+        | Pcont, _ :: _ ->
+            raise (Error (args_err sg p.proc_name (List.length av)))
+        | Pret, _ :: _ ->
+            raise (Error (args_err sg p.proc_name (List.length av)))
+        | Pfix _, [] ->
+            raise (Error (args_err sg p.proc_name (List.length av)))
+      in
+        loop sg f av
+  | _ ->
+      raise (Error "apply: not a procedure or primitive")
 
 let rec stage e cc =
   function
