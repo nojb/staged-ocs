@@ -168,6 +168,47 @@ let rec stage e th cc =
            else
              .~(cc .< g.g_val >.) >.
   | Cgetl i -> cc (getl e i)
+  | Capply (Cval (Sproc p), av) ->
+      begin
+        let Pf (sg, f) = p.proc_fun in 
+        let rec loop : type a. a sg -> a code -> _ -> unit code = fun sg f al ->
+          match sg, al with
+            Pfix sg, a :: al ->
+              stage e th (fun a -> loop sg .< .~f .~a >. al) a
+          | Pret, [] ->
+              cc f
+          | Pcont, [] ->
+              .< .~f (fun x -> .~(cc .< x >.)) >.
+          | Prests sg, _ ->
+              let rec mkrest cc = function
+                  [] -> cc .< Snull >.
+                | a :: al ->
+                    stage e th
+                      (fun a ->
+                         mkrest
+                           (fun al -> cc .< Spair { car = .~a; cdr = .~al } >.) al) a
+              in
+                mkrest (fun al -> loop sg .< .~f .~al >. []) al
+          | Prest sg, _ ->
+              let rec mkrest cc = function
+                  [] -> cc .< [] >.
+                | a :: al ->
+                    stage e th (fun a -> mkrest (fun al -> cc .< .~a :: .~al >.) al) a
+              in
+                mkrest (fun al -> loop sg .< .~f (Array.of_list .~al) >. []) al
+          | Pvoid sg, _ ->
+              loop sg .< .~f () >. al
+          | Pcont, _ :: _ ->
+              raise (Error (args_err sg p.proc_name (Array.length av)))
+          | Pret, _ :: _ ->
+              raise (Error (args_err sg p.proc_name (Array.length av)))
+          | Pfix _, [] ->
+              raise (Error (args_err sg p.proc_name (Array.length av)))
+          | Pthread sg, _ ->
+              loop sg .< .~f .~th >. al
+        in
+          loop sg .< f >. (Array.to_list av)
+      end
   | Capply (Clambda l, a) ->
       let rec loop e args vals =
         match args, vals with
