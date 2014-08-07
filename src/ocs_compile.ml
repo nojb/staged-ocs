@@ -31,21 +31,40 @@ let dosplit f =
 
 let genset b v =
   match b with
-    Vglob g -> Csetg (g, v)
+    Vglob g ->
+      begin
+        match g.g_val with
+          Sproc { proc_is_prim = true } ->
+            raise (Error ("cannot change primitive: " ^ (sym_name g.g_sym)))
+        | _ ->
+            Csetg (g, v)
+      end
   | Vloc l -> l.l_mut <- true; Csetl (l.l_pos, v)
   | _ -> raise (Error "cannot change syntactic keywords")
 ;;
 
 let gendef b v =
   match b with
-    Vglob g -> Cdefine (g, v)
+    Vglob g ->
+      begin
+        match g.g_val with
+          Sproc { proc_is_prim = true } ->
+            raise (Error ("cannot change primitive: " ^ (sym_name g.g_sym)))
+        | _ ->
+            Cdefine (g, v)
+      end
   | Vloc l -> l.l_mut <- true; Csetl (l.l_pos, v)
   | _ -> raise (Error "cannot change syntactic keywords")
 ;;
 
 let genref =
   function
-    Vglob g -> Cgetg g
+    Vglob g ->
+      begin
+        match g.g_val with
+          Sproc { proc_is_prim = true } -> Cval g.g_val
+        | _ -> Cgetg g
+      end
   | Vloc l -> Cgetl l.l_pos
   | Vsyntax _ -> Cval Sunspec
   | Vmacro _ -> Cval Sunspec
