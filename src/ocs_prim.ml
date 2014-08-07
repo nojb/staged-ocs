@@ -116,25 +116,12 @@ let is_equal a b =
 (*           eval th cc (mkapply (Cval f) args) *)
 (* ;; *)
 
-(* let force _ cc = *)
-(*   function *)
-(*     [| Spromise ({ promise_code = c; *)
-(*                    promise_val = None; *)
-(*                    promise_th = Some th } as p) |] -> *)
-(*       eval th *)
-(*         (fun v -> *)
-(*           match p.promise_val with              (\* Computed before returning? *\) *)
-(*             Some v -> cc v *)
-(*           | None -> *)
-(*               p.promise_val <- Some v; *)
-(*               p.promise_th <- None;             (\* Release reference for gc *\) *)
-(*               cc v) c *)
-(*   | [| Spromise { promise_code = _; *)
-(*                   promise_val = Some v; *)
-(*                   promise_th = _ } |] -> *)
-(*       cc v *)
-(*   | _ -> raise (Error "force: bad args") *)
-(* ;; *)
+let force p cc =
+  match p with
+    Spromise p ->
+      p cc
+  | _ -> cc p (* if not a promise, we just return the argument *)
+;;
 
 let map_for_each av cc is_map =
   let my_name = if is_map then "map" else "for-each"
@@ -254,7 +241,7 @@ let init e =
 
   (* set_pfcn e do_apply "apply"; *)
 
-  (* set_pfcn e force "force"; *)
+  set_pfg e (Pfix Pcont) force "force";
 
   set_pfg e (Prest Pcont) map "map";
   set_pfg e (Prest Pcont) for_each "for-each";

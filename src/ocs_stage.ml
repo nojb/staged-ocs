@@ -329,7 +329,12 @@ let rec stage e cc =
       .< let p = let r = ref None in fun cc ->
            match !r with
              None ->
-               .~(stage e (fun v -> .< let v = .~v in let () = r := Some v in cc v >.) c)
+               .~(stage e (fun v ->
+                   .< let v = .~v in
+                        match !r with
+                          None ->
+                            let () = r := Some v in cc v
+                        | Some v -> cc v >.) c)
            | Some v ->
                cc v
          in
