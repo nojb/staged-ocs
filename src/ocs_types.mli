@@ -102,6 +102,7 @@ and spair =
 and _ sg =
     Pfix : 'a sg -> (sval -> 'a) sg
   | Prest : 'a sg -> (sval array -> 'a) sg
+  | Prests : 'a sg -> (sval -> 'a) sg
   | Pcont : ((sval -> unit) -> unit) sg
   | Pret : sval sg
   | Pvoid : 'a sg -> (unit -> 'a) sg

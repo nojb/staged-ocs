@@ -25,6 +25,7 @@ let setl e i v =
 let rec proc_has_rest : type a. a sg -> bool = function
     Pfix sg -> proc_has_rest sg
   | Prest _ -> true
+  | Prests _ -> true
   | Pcont -> false
   | Pret -> false
   | Pvoid sg -> proc_has_rest sg
@@ -33,6 +34,7 @@ let rec proc_has_rest : type a. a sg -> bool = function
 let rec proc_nargs : type a. a sg -> int = function
     Pfix sg -> 1 + proc_nargs sg
   | Prest _ -> 1
+  | Prests _ -> 1
   | Pcont -> 0
   | Pret -> 0
   | Pvoid sg -> proc_nargs sg
@@ -79,6 +81,14 @@ let rec doapply (cc : sval -> unit) p av =
         cc f
     | Pcont, [] ->
         f cc
+    | Prests sg, _ ->
+        let rec mkrest = function
+            [] -> Snull
+          | a :: al -> Spair { car = a; cdr = mkrest al }
+        in
+          loop sg (f (mkrest al)) []
+    | Prest sg, _ ->
+        loop sg (f (Array.of_list al)) []
     | _ ->
         assert false
   in
@@ -189,7 +199,7 @@ let rec stage e cc =
       in
       let rec loop cc = function
           [] -> cc.cc Pcont
-        | [_] when l.lam_has_rest -> cc.cc (Prest Pcont)
+        | [_] when l.lam_has_rest -> cc.cc (Prests Pcont)
         | _ :: rest -> loop { cc = fun sg -> cc.cc (Pfix sg) } rest
       in
       let rec mkargs : type a. _ -> _ -> a sg -> a code = fun e largs sg ->
@@ -201,12 +211,11 @@ let rec stage e cc =
               .< fun x -> .~(mkargs (`I .<x>. :: e) largs sg) >.
         | [], Pcont ->
             .< fun cc -> .~(stage e (fun x -> .< cc .~x >.) l.lam_body) >.
-        | [a], Prest Pcont ->
-            assert false
-            (* if is_mutable a then *)
-            (*   .< fun x cc -> let x = ref x in .~(stage (`M .<x>. :: e) (fun x -> .< cc .~x >.) l.lam_body) >. *)
-            (* else *)
-            (*   .< fun x cc -> .~(stage (`I .<x>. :: e) (fun x -> .< cc .~x >.) l.lam_body) >. *)
+        | [a], Prests Pcont ->
+            if is_mutable a then
+              .< fun x cc -> let x = ref x in .~(stage (`M .<x>. :: e) (fun x -> .< cc .~x >.) l.lam_body) >.
+            else
+              .< fun x cc -> .~(stage (`I .<x>. :: e) (fun x -> .< cc .~x >.) l.lam_body) >.
         | _ ->
             assert false
       in
