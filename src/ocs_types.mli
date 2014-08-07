@@ -129,10 +129,10 @@ and scode =
   | Cor of scode array
   | Cif of scode * scode * scode
   | Csetg of gvar * scode
-  | Csetl of int * int * scode
+  | Csetl of int * scode
   | Cdefine of gvar * scode
   | Cgetg of gvar
-  | Cgetl of int * int
+  | Cgetl of int
   | Capply of scode * scode array
   | Clambda of sproc
   | Cqqp of scode * scode
@@ -165,7 +165,7 @@ and thread =
   (* Bindings, used during analysis.  *)
 and vbind =
     Vglob of gvar
-  | Vloc of int * int
+  | Vloc of int
   | Vsyntax of (env -> sval array -> scode)
   | Vmacro of (env -> sval array -> sval)
   | Vkeyword of string

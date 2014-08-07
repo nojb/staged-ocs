@@ -32,21 +32,21 @@ let dosplit f =
 let genset b v =
   match b with
     Vglob g -> Csetg (g, v)
-  | Vloc (d, i) -> Csetl (d, i, v)
+  | Vloc i -> Csetl (i, v)
   | _ -> raise (Error "cannot change syntactic keywords")
 ;;
 
 let gendef b v =
   match b with
     Vglob g -> Cdefine (g, v)
-  | Vloc (d, i) -> Csetl (d, i, v)
+  | Vloc i -> Csetl (i, v)
   | _ -> raise (Error "cannot change syntactic keywords")
 ;;
 
 let genref =
   function
     Vglob g -> Cgetg g
-  | Vloc (d, i) -> Cgetl (d, i)
+  | Vloc i -> Cgetl i
   | Vsyntax _ -> Cval Sunspec
   | Vmacro _ -> Cval Sunspec
   | Vkeyword _ -> Cval Sunbound

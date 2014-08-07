@@ -15,14 +15,14 @@ let top_env () =
 let new_scope e =
   { env_depth = e.env_depth;
     env_vartable = vt_inherit e.env_vartable;
-    env_frame_size = e.env_frame_size;
+    env_frame_size = ref !(e.env_frame_size);
     env_tagged = e.env_tagged }
 ;;
 
 let new_frame e =
   { env_depth = e.env_depth + 1;
     env_vartable = vt_inherit e.env_vartable;
-    env_frame_size = ref 0;
+    env_frame_size = ref !(e.env_frame_size);
     env_tagged = e.env_tagged }
 ;;
 
@@ -30,7 +30,7 @@ let new_var e =
   if e.env_depth < 0 then
     Vglob { g_sym = Snull; g_val = Sunbound }
   else
-    let v = Vloc (e.env_depth, !(e.env_frame_size)) in
+    let v = Vloc !(e.env_frame_size) in
       incr e.env_frame_size;
       v
 ;;
