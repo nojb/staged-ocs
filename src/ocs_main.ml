@@ -13,8 +13,8 @@ let main () =
     if !loadf = [] then
       Ocs_top.interactive ()
     else
-      let e = Ocs_top.make_env ()
-      and th = Ocs_top.make_thread () in
+      let e = Ocs_top.make_env () in
+      (* and th = Ocs_top.make_thread () in *)
         try
           List.iter (fun x -> Ocs_prim.load_file e x) !loadf
         with

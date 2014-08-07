@@ -5,7 +5,7 @@
 OCAMLC = metaocamlc
 OCAMLDEP = ocamldep
 
-OCAMLFLAGS =
+OCAMLFLAGS = -warn-error +a
 
 .SUFFIXES: .o .c .h .cc .cpp .y .l .a .ml .mli .cmx .cmi .cmo
 

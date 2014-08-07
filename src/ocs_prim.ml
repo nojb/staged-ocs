@@ -172,8 +172,7 @@ let for_each av cc =
 
 let load_file e (* th *) name =
   (* let th = { th with th_display = [| |]; th_depth = -1 } *)
-  let th = ()
-  and inp = Ocs_port.open_input_port name in
+  let inp = Ocs_port.open_input_port name in
   let lex = Ocs_lex.make_lexer inp name in
   let rec loop () =
     match Ocs_read.read_expr lex with

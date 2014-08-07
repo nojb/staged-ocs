@@ -4,7 +4,6 @@ open Ocs_types
 open Ocs_error
 open Ocs_env
 open Ocs_compile
-(* open Ocs_eval *)
 open Ocs_stage
 open Ocs_print
 open Ocs_macro

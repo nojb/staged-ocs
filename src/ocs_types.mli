@@ -93,6 +93,7 @@ and sproc =
     proc_fun : procf
   }
 
+  (* Procedure signature and implementation. *)
 and procf =
     Pf : 'a sg * 'a -> procf
 
@@ -148,10 +149,11 @@ and thread =
     th_dynext : dynext option		(* Current dynamic extent.  *)
   }
 
+  (* Local variable slot. *)
 and vloc =
   {
-    mutable l_mut : bool;
-    l_pos : int
+    mutable l_mut : bool;   (* Whether the variable is mutated. *)
+    l_pos : int             (* Frame index *)
   }
 
   (* Bindings, used during analysis.  *)
@@ -171,12 +173,17 @@ and env =
     mutable env_tagged : (env * sval * vbind) list
   }
 
+  (* Staging environment, used during staging.  *)
+and senv =
+  [ `I of sval code
+  | `M of sval ref code ] list
+
   (* Dynamic extents are associated with threads and continuations.  *)
 and dynext =
   {
     dynext_parent : dynext option;
     dynext_depth : int;
-    dynext_before : thread * scode;
-    dynext_after : thread * scode
+    dynext_before : thread * ((sval -> unit) -> unit);
+    dynext_after : thread * ((sval -> unit) -> unit)
   }
 
