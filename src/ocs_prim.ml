@@ -96,7 +96,7 @@ let is_equal a b =
   if test_equal a b then Strue else Sfalse
 ;;
 
-let do_apply f av cc =
+let do_apply f av th cc =
   let n = Array.length av in
   let rec loop i r =
     if i = 0 then
@@ -107,7 +107,7 @@ let do_apply f av cc =
       loop (i - 1) (av.(i)::r)
   in
   let args = (loop (n - 1) []) in
-    doapply cc f args
+    doapply th cc f args
 ;;
 
 let force p cc =
@@ -117,7 +117,7 @@ let force p cc =
   | _ -> cc p (* if not a promise, we just return the argument *)
 ;;
 
-let map_for_each av cc is_map =
+let map_for_each av th cc is_map =
   let my_name = if is_map then "map" else "for-each"
   and na = Array.length av - 1 in
     if na <= 0 then
@@ -152,7 +152,7 @@ let map_for_each av cc is_map =
         match args.(0) with
           Snull -> cc !result
         | Spair _ ->
-            doapply
+            doapply th
               (fun v ->
                 if is_map then append v;
                 loop (Array.map get_cdr args))
@@ -162,16 +162,15 @@ let map_for_each av cc is_map =
         loop (Array.sub av 1 na)
 ;;
 
-let map av cc =
-  map_for_each av cc true
+let map av th cc =
+  map_for_each av th cc true
 ;;
 
-let for_each av cc =
-  map_for_each av cc false
+let for_each av th cc =
+  map_for_each av th cc false
 ;;
 
-let load_file e (* th *) name =
-  (* let th = { th with th_display = [| |]; th_depth = -1 } *)
+let load_file e th name =
   let inp = Ocs_port.open_input_port name in
   let lex = Ocs_lex.make_lexer inp name in
   let rec loop () =
@@ -179,24 +178,24 @@ let load_file e (* th *) name =
       Seof -> ()
     | v ->
         let c = compile e v in
-        let sc = stage [] (fun x -> .< let _ = .~x in () >.) c in
+        let sc = stage [] .< th >. (fun x -> .< let _ = .~x in () >.) c in
           Runcode.run sc;
           loop ()
   in
     loop ()
 ;;
 
-let load_prim e a cc =
+let load_prim e a th cc =
   match a with
-    Sstring name -> load_file e name; cc Sunspec
+    Sstring name -> load_file e th name; cc Sunspec
   | _ -> raise (Error "load: invalid name argument")
 ;;
 
-let eval_prim av cc =
+let eval_prim av th cc =
   match av with
     [| expr; Sesym (e, _) |] ->
       let c = compile e expr in
-      let sc = stage [] (fun x -> .< cc .~x >.) c in
+      let sc = stage [] .< th >. (fun x -> .< cc .~x >.) c in
         Runcode.run sc
   | _ -> raise (Error "eval: invalid args")
 ;;
@@ -235,15 +234,15 @@ let init e =
   set_pf2 e is_eqv "eqv?";
   set_pf2 e is_equal "equal?";
 
-  set_pfg e (Pfix (Prest Pcont)) do_apply "apply";
+  set_pfg e (Pfix (Prest (Pthread Pcont))) do_apply "apply";
 
   set_pfg e (Pfix Pcont) force "force";
 
-  set_pfg e (Prest Pcont) map "map";
-  set_pfg e (Prest Pcont) for_each "for-each";
+  set_pfg e (Prest (Pthread Pcont)) map "map";
+  set_pfg e (Prest (Pthread Pcont)) for_each "for-each";
 
-  set_pfg e (Pfix Pcont) (load_prim e) "load";
-  set_pfg e (Prest Pcont) eval_prim "eval";
+  set_pfg e (Pfix (Pthread Pcont)) (load_prim e) "load";
+  set_pfg e (Prest (Pthread Pcont)) eval_prim "eval";
 
   set_pf1 e (report_env (env_copy e)) "scheme-report-environment";
   set_pf1 e null_env "null-environment";

@@ -2,6 +2,6 @@
 
 open Ocs_types
 
-val stage : senv -> (sval code -> unit code) -> scode -> unit code
+val stage : senv -> thread code -> (sval code -> unit code) -> scode -> unit code
 
-val doapply : (sval -> unit) -> sval -> sval list -> unit
+val doapply : thread -> (sval -> unit) -> sval -> sval list -> unit

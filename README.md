@@ -11,11 +11,13 @@ The rest of this file gives some information about this implementation.  Most of
 the text is a direct copy or a very ligthly edited copy of the README file of
 the original `ocs` (see next section).
 
+Contact: Nicolas Ojeda Bar (<n.oje.bar@gmail.com>)
+
 ## Acknowledgements
 
 `staged-ocs` is directly based on the `ocs` Scheme interpreter.  The original
 webpage seems to have disappeared, but a version of it can be found at
-http://archive.today/dSl40.
+<http://archive.today/dSl40>.
 
 ## General
 
@@ -37,9 +39,9 @@ Anything else that does not work as specified in R5RS is a bug.
 Requirements:
 
 - GNU make or pmake (BSD make)
-- MetaOCaml BER 101 (http://okmij.org/ftp/ML/MetaOCaml.html)
+- MetaOCaml BER 101 (<http://okmij.org/ftp/ML/MetaOCaml.html>)
 
-In order to install MetaOCaml, the easiest way is to use opam (https://opam.ocaml.org).
+In order to install MetaOCaml, the easiest way is to use opam (<https://opam.ocaml.org>).
 
     opam switch 4.01.0+BER
 
@@ -83,14 +85,14 @@ in the module `Ocs_types` are visible.
 
 Scheme values (S-expressions) are of the type sval.
 
-Before evaluation Scheme values are compiled to internal representations
-of the type code.  This is done by the function
+Before evaluation Scheme values are compiled to internal representations of the
+type code.  This is done by the function
 
     Ocs_compile.compile : env -> sval -> scode
 
-The env type is used during compilation for variable bindings.  A
-new env is created for each new scope and frame.  The base
-environment with the basic language bindings can be created using
+The env type is used during compilation for variable bindings.  A new env is
+created for each new scope and frame.  The base environment with the basic
+language bindings can be created using
 
     Ocs_top.make_env : unit -> env
 
@@ -100,11 +102,10 @@ Staging is done by
 
 where the second argument is a continuation to pass the result to.
 
-The thread type is used during evaluation for storing the current frame and
-display for local variables, the input/output ports and the current dynamic
-extent.  It does not represent a thread in the concurrent sense, but rather the
-evaluation state, and is copied and changed rather than modified in place.  The
-initial thread to be passed to the evaluator can be created using
+The `thread` type is used at run-time for storing the current input/output ports
+and the current dynamic extent.  It does not represent a thread in the
+concurrent sense, but rather the evaluation state, and is copied and changed
+rather than modified in place.  The initial thread can be created using
 `Ocs_top.make_thread : unit -> thread`.
 
 ## Continuations and I/O

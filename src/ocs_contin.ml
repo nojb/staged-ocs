@@ -51,7 +51,7 @@ let rec find_depth fdx tdx al bl =
 (*   | av -> dxswitch th.th_dynext dx (fun () -> cc (Svalues av)) *)
 (* ;; *)
 
-let call_cc proc cc =
+let call_cc proc th cc =
   let cont =
     let continuation al _ =
       match al with
@@ -62,7 +62,7 @@ let call_cc proc cc =
             proc_is_prim = false;
             proc_fun = Pf (Prest Pcont, continuation) }
   in
-    doapply cc proc [ cont ]
+    doapply th cc proc [ cont ]
 ;;
 
 let values =
@@ -71,12 +71,12 @@ let values =
   | av -> Svalues av
 ;;
 
-let call_values producer consumer cc =
-  doapply (function
+let call_values producer consumer th cc =
+  doapply th (function
         Svalues av ->
-          doapply cc consumer (Array.to_list av)
+          doapply th cc consumer (Array.to_list av)
       | x ->
-          doapply cc consumer [x])
+          doapply th cc consumer [x])
     producer []
 ;;
 
@@ -103,12 +103,12 @@ let call_values producer consumer cc =
 (* ;; *)
 
 let init e =
-  set_pfg e (Pfix Pcont) call_cc "call-with-current-continuation";
-  set_pfg e (Pfix Pcont) call_cc "call/cc";
+  set_pfg e (Pfix (Pthread Pcont)) call_cc "call-with-current-continuation";
+  set_pfg e (Pfix (Pthread Pcont)) call_cc "call/cc";
 
   set_pfn e values "values";
 
-  set_pfg e (Pfix (Pfix Pcont)) call_values "call-with-values";
+  set_pfg e (Pfix (Pfix (Pthread Pcont))) call_values "call-with-values";
   (* set_pfcn e dynamic_wind "dynamic-wind"; *)
 ;;
 

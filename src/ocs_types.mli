@@ -84,6 +84,7 @@ and _ sg =
   | Pcont : ((sval -> unit) -> unit) sg
   | Pret : sval sg
   | Pvoid : 'a sg -> (unit -> 'a) sg
+  | Pthread : 'a sg -> (thread -> 'a) sg
 
   (* Procedure structure.  *)
 and sproc =
