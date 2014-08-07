@@ -9,7 +9,6 @@ open Ocs_misc
    th_frame is the deepest frame, not yet part of the display.  *)
 
 let getl e i =
-  Printf.eprintf "getl: i=%d l=%d\n%!" i (List.length e);
   let i = List.length e - i - 1 in
     match List.nth e i with
       `I c -> c
@@ -71,28 +70,24 @@ let rec proc_nargs : type a. a sg -> int = function
 (*   | _ -> raise (Error "apply: not a procedure or primitive") *)
 (* ;; *)
 
-(* let rec doapply th cc p disp av = *)
-(*   let th = { *)
-(*     th with *)
-(*     th_frame = Array.make p.proc_frame_size Seof; *)
-(*     th_display = disp; *)
-(*     th_depth = Array.length disp } *)
-(*   in *)
-(*     if p.proc_has_rest then *)
-(*       begin *)
-(*         let nfixed = p.proc_nargs - 1 *)
-(*         and n = Array.length av in *)
-(*           if nfixed > 0 then *)
-(*             Array.blit av 0 th.th_frame 0 nfixed; *)
-(*           let rec mkrest i r = *)
-(*             if i < nfixed then r *)
-(*             else mkrest (i - 1) (Spair { car = av.(i); cdr = r }) *)
-(*           in *)
-(*             th.th_frame.(nfixed) <- mkrest (n - 1) Snull *)
-(*       end *)
-(*     else *)
-(*       Array.blit av 0 th.th_frame 0 p.proc_nargs; *)
-(*     eval th cc p.proc_body *)
+let rec doapply (cc : sval -> unit) p av =
+  let rec loop : type a. a sg -> a -> _ -> unit = fun sg f al ->
+    match sg, al with
+      Pfix sg, a :: al ->
+        loop sg (f a) al
+    | Pret, [] ->
+        cc f
+    | Pcont, [] ->
+        f cc
+    | _ ->
+        assert false
+  in
+    match p with
+      Sproc p ->
+        let Pf (sg, f) = p.proc_fun in
+          loop sg f av
+    | _ ->
+        raise (Error "apply: not a procedure or primitive")
 
 let rec stage e cc =
   function
@@ -174,29 +169,18 @@ let rec stage e cc =
            else
              .~(cc .< g.g_val >.) >.
   | Cgetl i -> cc (getl e i)
-  (* | Capplyn (c, a) -> *)
-  (*     eval th (fun cv -> *)
-  (*       let n = Array.length a in *)
-  (*       let av = Array.make n Snull in *)
-  (*       let rec loop i = *)
-  (*         if i = n then *)
-  (*           begin *)
-  (*             chkargs cv n; *)
-  (*             match cv with *)
-  (*               Sproc (p, d) -> doapply th cc p d av *)
-  (*             | Sprim p -> *)
-  (*                 begin *)
-  (*                   match p.prim_fun with *)
-  (*                     Pfn f -> cc (f av) *)
-  (*                   | Pfcn f -> f th cc av *)
-  (*                   | _ -> assert false *)
-  (*                 end *)
-  (*             | _ -> assert false *)
-  (*           end *)
-  (*         else *)
-  (*           eval th (fun x -> av.(i) <- x; loop (i + 1)) a.(i) *)
-  (*       in *)
-  (*         loop 0) c *)
+  | Capply (c, a) ->
+      stage e (fun cv ->
+          .< let f = .~cv in
+               .~begin
+                 let rec loop cc = function
+                     [] -> cc .< [] >.
+                   | a :: al ->
+                       stage e (fun a ->
+                           loop (fun al -> cc .< .~a :: .~al >.) al) a
+                 in
+                   loop (fun al -> .< doapply (fun x -> .~(cc .<x>.)) f .~al >.) (Array.to_list a)
+               end >.) c
   | Clambda l ->
       let is_mutable = function
           Vloc l -> l.l_mut
