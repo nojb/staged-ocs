@@ -100,9 +100,9 @@ language bindings can be created using
 
 Staging is done by
 
-    Ocs_eval.stage : senv -> (sval code -> unit code) -> scode -> unit code
+    Ocs_eval.stage : senv -> thread code -> (sval code -> unit code) -> scode -> unit code
 
-where the second argument is a continuation to pass the result to.
+where the third argument is a continuation to pass the result to.
 
 The `thread` type is used at run-time for storing the current input/output ports
 and the current dynamic extent.  It does not represent a thread in the
