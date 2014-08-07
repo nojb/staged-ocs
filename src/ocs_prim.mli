@@ -2,7 +2,7 @@
 
 open Ocs_types
 
-(* val load_file : env -> thread -> string -> unit *)
+val load_file : env -> string -> unit
 
 val init : env -> unit
 

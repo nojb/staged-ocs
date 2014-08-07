@@ -170,26 +170,28 @@ let for_each av cc =
   map_for_each av cc false
 ;;
 
-(* let load_file e th name = *)
-(*   let th = { th with th_display = [| |]; th_depth = -1 } *)
-(*   and inp = Ocs_port.open_input_port name in *)
-(*   let lex = Ocs_lex.make_lexer inp name in *)
-(*   let rec loop () = *)
-(*     match Ocs_read.read_expr lex with *)
-(*       Seof -> () *)
-(*     | v -> *)
-(*         let c = compile e v in *)
-(*           eval th (fun _ -> ()) c; *)
-(*           loop () *)
-(*   in *)
-(*     loop () *)
-(* ;; *)
+let load_file e (* th *) name =
+  (* let th = { th with th_display = [| |]; th_depth = -1 } *)
+  let th = ()
+  and inp = Ocs_port.open_input_port name in
+  let lex = Ocs_lex.make_lexer inp name in
+  let rec loop () =
+    match Ocs_read.read_expr lex with
+      Seof -> ()
+    | v ->
+        let c = compile e v in
+        let sc = stage [] (fun x -> .< let _ = .~x in () >.) c in
+          Runcode.run sc;
+          loop ()
+  in
+    loop ()
+;;
 
-(* let load_prim e th cc = *)
-(*   function *)
-(*     [| Sstring name |] -> load_file e th name; cc Sunspec *)
-(*   | _ -> raise (Error "load: invalid name argument") *)
-(* ;; *)
+let load_prim e a cc =
+  match a with
+    Sstring name -> load_file e name; cc Sunspec
+  | _ -> raise (Error "load: invalid name argument")
+;;
 
 let eval_prim av cc =
   match av with
@@ -241,7 +243,7 @@ let init e =
   set_pfg e (Prest Pcont) map "map";
   set_pfg e (Prest Pcont) for_each "for-each";
 
-  (* set_pfcn e (load_prim e) "load"; *)
+  set_pfg e (Pfix Pcont) (load_prim e) "load";
   set_pfg e (Prest Pcont) eval_prim "eval";
 
   set_pf1 e (report_env (env_copy e)) "scheme-report-environment";
