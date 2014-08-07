@@ -51,7 +51,7 @@ type sval =
   | Sproc of sproc
 
   (* Delayed expression.  *)
-  | Spromise of spromise
+  | Spromise of ((sval -> unit) -> unit)
 
   (* A set of values returned by the 'values' primitive,
      deconstructed into multiple parameters by call-with-values.  *)
@@ -76,29 +76,7 @@ and spair =
     mutable cdr : sval
   }
 
-  (* Primitive structure.  *)
-(* and sprim = *)
-(*   { *)
-(*     prim_fun : primf; *)
-(*     prim_name : string *)
-(*   } *)
-
-(*   (\* Primitive function types.  *\) *)
-(* and primf = *)
-(*   (\* Simple functional interface to primitives with a small, constant *)
-(*      number of arguments.  *\) *)
-(*     Pf0 of (unit -> sval) *)
-(*   | Pf1 of (sval -> sval) *)
-(*   | Pf2 of (sval -> sval -> sval) *)
-(*   | Pf3 of (sval -> sval -> sval -> sval) *)
-
-(*   (\* Functional interface to primitives with a variable number of arguments.  *\) *)
-(*   | Pfn of (sval array -> sval) *)
-
-(*   (\* Continuation-based interface to primitives, also includes the thread *)
-(*      and supports a variable number of arguments.  *\) *)
-(*   | Pfcn of (thread -> (sval -> unit) -> sval array -> unit) *)
-
+  (* Procedure signature.  *)
 and _ sg =
     Pfix : 'a sg -> (sval -> 'a) sg
   | Prest : 'a sg -> (sval array -> 'a) sg
@@ -117,14 +95,6 @@ and sproc =
 
 and procf =
     Pf : 'a sg * 'a -> procf
-
-  (* Delayed expression.  *)
-and spromise =
-  {
-    promise_code : scode;
-    mutable promise_val : sval option;
-    mutable promise_th : thread option	(* Copy of the thread state *)
-  }
 
   (* Code types are used to represent analyzed expressions prepared for
      evaluation.  *)

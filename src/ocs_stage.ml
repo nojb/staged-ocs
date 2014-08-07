@@ -320,10 +320,15 @@ let rec stage e cc =
                     in
                       loop 0
                   end >.) c
-  (* | Cdelay c -> *)
-  (*     cc (Spromise { promise_code = c; *)
-  (*                    promise_val = None; *)
-  (*                    promise_th = Some { th with th_frame = th.th_frame } }) *)
+  | Cdelay c ->
+      .< let p = let r = ref None in fun cc ->
+           match !r with
+             None ->
+               .~(stage e (fun v -> .< let v = .~v in let () = r := Some v in cc v >.) c)
+           | Some v ->
+               cc v
+         in
+           .~(cc .< Spromise p >.) >.
   | _ -> raise (Error "stage: internal error")
 ;;
 
