@@ -143,9 +143,6 @@ and gvar =
   (* Thread state, used during evaluation.  *)
 and thread =
   {
-    th_frame : sval array;		(* Current local frame.  *)
-    th_display : sval array array;	(* Current display.  *)
-    th_depth : int;			(* Display depth.  *)
     th_stdin : sval;			(* Default input port.  *)
     th_stdout : sval;			(* Default output port.  *)
     th_dynext : dynext option		(* Current dynamic extent.  *)

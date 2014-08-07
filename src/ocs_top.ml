@@ -28,10 +28,7 @@ let make_env () =
 
 (* Create a top-level thread.  *)
 let make_thread () =
-  { th_display = [| |];
-    th_frame = [| |];
-    th_depth = -1;
-    th_stdin = Sport (Ocs_port.input_port stdin);
+  { th_stdin = Sport (Ocs_port.input_port stdin);
     th_stdout = Sport (Ocs_port.output_port stdout);
     th_dynext = None }
 ;;
