@@ -48,30 +48,6 @@ let args_err sg proc_name n =
     Printf.sprintf "procedure %s expected %d args got %d"
       proc_name (proc_nargs sg) n
 
-(* let chkargs p n = *)
-(*   match p with *)
-(*     Sproc (p, _) -> *)
-(*       if n <> p.proc_nargs && (not p.proc_has_rest || n < p.proc_nargs - 1) then *)
-(*         raise (Error (args_err p n)) *)
-(*       else *)
-(*         () *)
-(*   | Sprim p -> *)
-(*       if *)
-(*         begin *)
-(*           match p.prim_fun with *)
-(*             Pf0 _ -> n = 0 *)
-(*           | Pf1 _ -> n = 1 *)
-(*           | Pf2 _ -> n = 2 *)
-(*           | Pf3 _ -> n = 3 *)
-(*           | Pfn _ | Pfcn _ -> true *)
-(*         end *)
-(*       then *)
-(*         () *)
-(*       else *)
-(*         raise (Error (p.prim_name ^ ": wrong number of arguments")) *)
-(*   | _ -> raise (Error "apply: not a procedure or primitive") *)
-(* ;; *)
-
 let rec doapply (cc : sval -> unit) p av =
   match p with
     Sproc p ->

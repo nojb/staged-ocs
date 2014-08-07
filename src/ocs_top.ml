@@ -63,6 +63,7 @@ let top_loop env th =
                        Ocs_port.putc outp '\n' >.) c in
               Print_code.print_code Format.str_formatter cv;
               Ocs_port.puts outp (Format.flush_str_formatter ());
+              Ocs_port.flush outp;
               Runcode.run cv;
               loop ()
       with Error err | ErrorL (_, err) ->
