@@ -96,25 +96,19 @@ let is_equal a b =
   if test_equal a b then Strue else Sfalse
 ;;
 
-(* let do_apply th cc av = *)
-(*   let n = Array.length av in *)
-(*     if n < 1 then *)
-(*       raise (Error "apply: bad args") *)
-(*     else *)
-(*       let f = av.(0) in *)
-(*       let rec loop i r = *)
-(*         if i = 0 then *)
-(*           r *)
-(*         else if i = n - 1 then  (\* r must be [] *\) *)
-(*           loop (i - 1) (list_to_caml av.(i)) *)
-(*         else *)
-(*           loop (i - 1) (av.(i)::r) *)
-(*       in *)
-(*         let args = Array.map (fun x -> Cval x) *)
-(*                              (Array.of_list (loop (n - 1) [])) *)
-(*         in *)
-(*           eval th cc (mkapply (Cval f) args) *)
-(* ;; *)
+let do_apply f av cc =
+  let n = Array.length av in
+  let rec loop i r =
+    if i = 0 then
+      av.(0) :: r
+    else if i = n - 1 then  (* r must be [] *)
+      loop (i - 1) (list_to_caml av.(i))
+    else
+      loop (i - 1) (av.(i)::r)
+  in
+  let args = (loop (n - 1) []) in
+    doapply cc f args
+;;
 
 let force p cc =
   match p with
@@ -239,7 +233,7 @@ let init e =
   set_pf2 e is_eqv "eqv?";
   set_pf2 e is_equal "equal?";
 
-  (* set_pfcn e do_apply "apply"; *)
+  set_pfg e (Pfix (Prest Pcont)) do_apply "apply";
 
   set_pfg e (Pfix Pcont) force "force";
 
