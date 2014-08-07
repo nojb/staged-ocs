@@ -130,6 +130,8 @@ and slambda =
     lam_name : string
   }
 
+  (* This is necessary to pass a function ('a. 'a sg -> 'b) as an argument, see
+     the case of [Clambda] in [Ocs_stage.stage] *)
 and 'b slambda_c =
   {
     cc : 'a. 'a sg -> 'b

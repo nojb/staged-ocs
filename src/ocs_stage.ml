@@ -168,6 +168,34 @@ let rec stage e th cc =
            else
              .~(cc .< g.g_val >.) >.
   | Cgetl i -> cc (getl e i)
+  | Capply (Clambda l, a) ->
+      let rec loop e args vals =
+        match args, vals with
+          [], [] ->
+            stage e th cc l.lam_body
+        | [a], _ when l.lam_has_rest ->
+            let rec mkrest cc = function
+                [] -> cc .< Snull >.
+              | v :: vals ->
+                  stage e th
+                    (fun v ->
+                       mkrest (fun vals -> cc .< Spair { car = .~v; cdr = .~vals } >.) vals)
+                    v
+            in
+              mkrest (fun rest ->
+                  if Ocs_env.is_mutable a then
+                    .< let x = ref .~rest in .~(loop (`M .< x >. :: e) [] []) >.
+                  else
+                    .< let x = .~rest in .~(loop (`I .< x >. :: e) [] []) >.) vals
+        | a :: args, v :: vals ->
+            if Ocs_env.is_mutable a then
+              stage e th (fun v -> .< let x = ref .~v in .~(loop (`M .< x >. :: e) args vals) >.) v
+            else
+              stage e th (fun v -> .< let x = .~v in .~(loop (`I .< x >. :: e) args vals) >.) v
+        | _ ->
+            raise (Error "apply: wrong number of arguments")
+      in
+        loop e l.lam_args (Array.to_list a)
   | Capply (c, a) ->
       stage e th
         (fun cv ->
@@ -180,14 +208,11 @@ let rec stage e th cc =
                          (fun a ->
                            loop (fun al -> cc .< .~a :: .~al >.) al) a
                  in
-                   loop (fun al -> .< doapply .~th (fun x -> .~(cc .<x>.)) f .~al >.) (Array.to_list a)
+                   loop
+                     (fun al -> .< doapply .~th (fun x -> .~(cc .<x>.)) f .~al >.)
+                     (Array.to_list a)
                end >.) c
   | Clambda l ->
-      let is_mutable = function
-          Vloc l -> l.l_mut
-        | Vglob _ -> true
-        | _ -> false
-      in
       let rec loop cc = function
           [] -> cc.cc (Pthread Pcont)
         | [_] when l.lam_has_rest -> cc.cc (Prests (Pthread Pcont))
@@ -196,14 +221,14 @@ let rec stage e th cc =
       let rec mkargs : type a. _ -> _ -> a sg -> a code = fun e largs sg ->
         match largs, sg with
           b :: largs, Pfix sg ->
-            if is_mutable b then
+            if Ocs_env.is_mutable b then
               .< fun x -> let x = ref x in .~(mkargs (`M .<x>. :: e) largs sg) >.
             else
               .< fun x -> .~(mkargs (`I .<x>. :: e) largs sg) >.
         | [], Pthread Pcont ->
             .< fun th cc -> .~(stage e .< th >. (fun x -> .< cc .~x >.) l.lam_body) >.
         | [a], Prests (Pthread Pcont) ->
-            if is_mutable a then
+            if Ocs_env.is_mutable a then
               .< fun x th cc ->
                  let x = ref x in
                    .~(stage (`M .<x>. :: e) .< th >. (fun x -> .< cc .~x >.) l.lam_body) >.
