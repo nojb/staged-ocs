@@ -21,6 +21,7 @@ val is_mutable : vbind -> bool
 
 val is_syntax : env -> sval -> (env -> sval array -> scode) -> bool
 
+val set_pfg : env -> 'a sg -> 'a -> string -> unit
 val set_pf0 : env -> (unit -> sval) -> string -> unit
 val set_pf1 : env -> (sval -> sval) -> string -> unit
 val set_pf2 : env -> (sval -> sval -> sval) -> string -> unit

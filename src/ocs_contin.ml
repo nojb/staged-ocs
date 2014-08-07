@@ -2,7 +2,8 @@
 
 open Ocs_types
 open Ocs_error
-(* open Ocs_eval *)
+open Ocs_prim
+open Ocs_stage
 open Ocs_env
 open Ocs_misc
 
@@ -67,18 +68,14 @@ let values =
   | av -> Svalues av
 ;;
 
-(* let call_values th cc = *)
-(*   function *)
-(*     [| producer; consumer |] -> *)
-(*       eval th *)
-(*         (function *)
-(*           Svalues av -> *)
-(*             eval th cc (mkapply (Cval consumer) *)
-(*                                 (Array.map (fun x -> Cval x) av)) *)
-(*         | x -> eval th cc (Capply1 (Cval consumer, Cval x))) *)
-(*         (Capply0 (Cval producer)) *)
-(*   | _ -> raise (Error "call-with-values: bad args") *)
-(* ;; *)
+let call_values producer consumer cc =
+  doapply (function
+        Svalues av ->
+          doapply cc consumer (Array.to_list av)
+      | x ->
+          doapply cc consumer [x])
+    producer []
+;;
 
 (* let dynamic_wind th cc = *)
 (*   function *)
@@ -108,7 +105,7 @@ let init e =
 
   set_pfn e values "values";
 
-  (* set_pfcn e call_values "call-with-values"; *)
+  set_pfg e (Pfix (Pfix Pcont)) call_values "call-with-values";
   (* set_pfcn e dynamic_wind "dynamic-wind"; *)
 ;;
 
