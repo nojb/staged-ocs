@@ -30,7 +30,7 @@ let new_var e =
   if e.env_depth < 0 then
     Vglob { g_sym = Snull; g_val = Sunbound }
   else
-    let v = Vloc !(e.env_frame_size) in
+    let v = Vloc { l_mut = false; l_pos = !(e.env_frame_size) } in
       incr e.env_frame_size;
       v
 ;;
@@ -122,6 +122,14 @@ let safe_is_keyword e sym name =
   match sym with
     Ssymbol _ | Sesym (_, _) -> is_keyword e sym name
   | _ -> false
+;;
+
+let is_mutable = function
+    Vglob _ -> true
+  | Vloc l -> l.l_mut
+  | Vsyntax _
+  | Vkeyword _
+  | Vmacro _ -> false
 ;;
 
 let is_syntax e sym sf =

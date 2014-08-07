@@ -32,32 +32,31 @@ let dosplit f =
 let genset b v =
   match b with
     Vglob g -> Csetg (g, v)
-  | Vloc i -> Csetl (i, v)
+  | Vloc l -> l.l_mut <- true; Csetl (l.l_pos, v)
   | _ -> raise (Error "cannot change syntactic keywords")
 ;;
 
 let gendef b v =
   match b with
     Vglob g -> Cdefine (g, v)
-  | Vloc i -> Csetl (i, v)
+  | Vloc l -> l.l_mut <- true; Csetl (l.l_pos, v)
   | _ -> raise (Error "cannot change syntactic keywords")
 ;;
 
 let genref =
   function
     Vglob g -> Cgetg g
-  | Vloc i -> Cgetl i
+  | Vloc l -> Cgetl l.l_pos
   | Vsyntax _ -> Cval Sunspec
   | Vmacro _ -> Cval Sunspec
   | Vkeyword _ -> Cval Sunbound
 ;;
 
-let make_proc c n hr fs =
-  { proc_body = c;
-    proc_nargs = n;
-    proc_has_rest = hr;
-    proc_frame_size = fs;
-    proc_name = "#<unknown>#" }
+let make_lambda ?(proc_name = "#<unknown>") c n hr =
+  { lam_body = c;
+    lam_args = n;
+    lam_has_rest = hr;
+    lam_name = proc_name }
 ;;
 
 let chksplice a =
@@ -101,11 +100,8 @@ let rec mkdefine e args =
     match args.(0) with
       Spair { car = (Ssymbol _ | Sesym (_, _)) as s; cdr = al } when narg > 1 ->
         begin
-          match mklambda e al args with
-            Clambda p as l ->
-              p.proc_name <- sym_name s;
-              gendef (get_var e s) l
-          | _ -> assert false
+          let l = mklambda ~proc_name:(sym_name s) e al args in
+            gendef (get_var e s) l
         end
     | (Ssymbol _ | Sesym (_, _)) as s when narg = 2 ->
         gendef (get_var e s) (compile e args.(1))
@@ -191,29 +187,30 @@ and mkset e args =
 (* Note that the first item of the "body" array is ignored, it
    corresponds to the argument list but may be in the form expected
    by either define or lambda.  *)
-and mklambda e args body =
+and mklambda ?proc_name e args body =
   let ne = new_frame e
-  and nargs = ref 0
+  and largs = ref []
   and has_rest = ref false in
     let rec scanargs =
       function
         Spair { car = (Ssymbol _ | Sesym (_, _)) as s; cdr = tl } ->
-          let _ = bind_var ne s in
-            incr nargs;
+          let r = bind_var ne s in
+            largs := r :: !largs;
             scanargs tl
       | (Ssymbol _ | Sesym (_, _)) as s ->
-          let _ = bind_var ne s in
-            incr nargs;
+          let r = bind_var ne s in
+            largs := r :: !largs;
             has_rest := true;
             ()
       | Snull -> ()
       | _ -> raise (Error "lambda: bad arg list")
     in
       scanargs args;
+      let largs = List.rev !largs in
       let body =
         Cseq (mkbody ne (Array.sub body 1 (Array.length body - 1)))
       in
-        Clambda (make_proc body !nargs !has_rest !(ne.env_frame_size))
+        Clambda (make_lambda ?proc_name body largs !has_rest)
 
 and mkif e args =
   match Array.length args with
@@ -229,11 +226,13 @@ and mknamedlet e s args =
   let ar = new_var e in
   let ne = new_frame e in
     bind_name ne s ar;
+    let largs = ref [] in
     let av =
-      Array.map (fun (s, v) -> let _ = bind_var ne s in v) argv in
+      Array.map (fun (s, v) -> let r = bind_var ne s in largs := r :: !largs; v) argv in
+    let largs = List.rev !largs in
     let body = Cseq (mkbody ne (Array.sub args 2 (Array.length args - 2))) in
     let proc =
-      Clambda (make_proc body (Array.length av) false !(ne.env_frame_size))
+      Clambda (make_lambda body largs false)
     in
       Cseq [| gendef ar proc; Capply (genref ar, av) |]
 
@@ -249,10 +248,12 @@ and mklet e args =
           (letsplit (fun s v -> s, compile e v))
           (Array.of_list (list_to_caml al)) in
       let ne = new_frame e in
-      let av = Array.map (fun (s, v) -> let _ = bind_var ne s in v) argv in
+      let largs = ref [] in
+      let av = Array.map (fun (s, v) -> let r = bind_var ne s in largs := r :: !largs; v) argv in
+      let largs = List.rev !largs in
       let body = Cseq (mkbody ne (Array.sub args 1 (Array.length args - 1))) in
       let proc =
-        Clambda (make_proc body (Array.length av) false !(ne.env_frame_size))
+        Clambda (make_lambda body largs false)
       in
         Capply (proc, av)
   | _ -> raise (Error "let: missing argument list")
@@ -265,9 +266,9 @@ and mkletstar e args =
       x::t ->
         let (s, v) = letsplit (fun s v -> s, compile e v) x in
         let ne = new_frame e in
-        let _ = bind_var ne s in
+        let r = bind_var ne s in
         let body = build ne t in
-        let proc = Clambda (make_proc body 1 false !(ne.env_frame_size)) in
+        let proc = Clambda (make_lambda body [r] false) in
           Capply (proc, [| v |])
     | [] -> Cseq (mkbody e (Array.sub args 1 (Array.length args - 1)))
   in
@@ -277,19 +278,25 @@ and mkletrec e args =
   if Array.length args < 2 then
     raise (Error "letrec: too few args");
   let ne = new_frame e in
+  let largs = ref [] in
   let av =
-    Array.map (letsplit (fun s v -> let r = bind_var ne s in (r, v)))
-              (Array.of_list (list_to_caml args.(0))) in
+    Array.map (letsplit (fun s v -> let r = bind_var ne s in largs := r :: !largs; (r, v)))
+      (Array.of_list (list_to_caml args.(0))) in
+  let largs = List.rev !largs in
   let avi = Array.map (fun (r, v) -> compile ne v) av in
   let ne' = new_frame ne in
-  let sets = Array.map (fun (r, v) -> gendef r (genref (new_var ne'))) av in
+  let largs' = ref [] in
+  let sets = Array.map (fun (r, v) ->
+      let rr = new_var ne' in
+        largs' := rr :: !largs';
+        gendef r (genref rr)) av in
+  let largs' = List.rev !largs' in
   let body = Cseq (Array.append sets
     (mkbody ne' (Array.sub args 1 (Array.length args - 1)))) in
   let proc =
-    Clambda (make_proc body (Array.length av) false !(ne'.env_frame_size)) in
+    Clambda (make_lambda body largs false) in
   let proc =
-    Clambda (make_proc (Capply (proc, avi))
-                       (Array.length av) false !(ne.env_frame_size))
+    Clambda (make_lambda (Capply (proc, avi)) largs' false)
   in
     Capply (proc, Array.map (fun _ -> Cval Sunspec) av)
 
@@ -340,8 +347,10 @@ and mkdo e args =
     | _ -> raise (Error "do: bad args")
   and anonvar = new_var e
   and ne = new_frame e in
-    let av = Array.map (fun (sym, init, _) ->
-                          let _ = bind_var ne sym in init) vv in
+  let largs = ref [] in
+  let av = Array.map (fun (sym, init, _) ->
+      let r = bind_var ne sym in largs := r :: !largs; init) vv in
+  let largs = List.rev !largs in
     let body =
       Cif (compile ne test, compileseq ne result,
            Cseq 
@@ -352,7 +361,7 @@ and mkdo e args =
                          Array.map (fun (_, _, step) -> compile ne step) vv) |]))
     in
       let proc =
-        Clambda (make_proc body (Array.length av) false !(ne.env_frame_size))
+        Clambda (make_lambda body largs false)
       in
         Cseq [| gendef anonvar proc; Capply (genref anonvar, av) |]
 

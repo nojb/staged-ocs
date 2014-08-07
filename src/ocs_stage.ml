@@ -8,51 +8,68 @@ open Ocs_misc
 (* Local variables are stored either in th_frame or th_display.
    th_frame is the deepest frame, not yet part of the display.  *)
 
-let getl th d i =
-  if d >= Array.length th.th_display then
-    th.th_frame.(i)
-  else
-    th.th_display.(d).(i)
+let getl e i =
+  Printf.eprintf "getl: i=%d l=%d\n%!" i (List.length e);
+  let i = List.length e - i - 1 in
+    match List.nth e i with
+      `I c -> c
+    | `M c -> .< ! .~c >.
 ;;
 
-let setl th d i v =
-  if d >= Array.length th.th_display then
-    th.th_frame.(i) <- v
-  else
-    th.th_display.(d).(i) <- v
+let setl e i v =
+  let i = List.length e - i - 1 in
+    match List.nth e i with
+      `I _ -> raise (Error "setl: internal error")
+    | `M c -> .< .~c := .~v >.
 ;;
 
-let args_err p n =
-  if p.proc_has_rest then
-    Printf.sprintf "procedure %s expected %d or more args got %d"
-      p.proc_name (p.proc_nargs - 1) n
-  else
-    Printf.sprintf "procedure %s expected %d args got %d"
-      p.proc_name p.proc_nargs n
-
-let chkargs p n =
-  match p with
-    Sproc (p, _) ->
-      if n <> p.proc_nargs && (not p.proc_has_rest || n < p.proc_nargs - 1) then
-        raise (Error (args_err p n))
-      else
-        ()
-  | Sprim p ->
-      if
-        begin
-          match p.prim_fun with
-            Pf0 _ -> n = 0
-          | Pf1 _ -> n = 1
-          | Pf2 _ -> n = 2
-          | Pf3 _ -> n = 3
-          | Pfn _ | Pfcn _ -> true
-        end
-      then
-        ()
-      else
-        raise (Error (p.prim_name ^ ": wrong number of arguments"))
-  | _ -> raise (Error "apply: not a procedure or primitive")
+let rec proc_has_rest : type a. a sg -> bool = function
+    Pfix sg -> proc_has_rest sg
+  | Prest _ -> true
+  | Pcont -> false
+  | Pret -> false
+  | Pvoid sg -> proc_has_rest sg
 ;;
+
+let rec proc_nargs : type a. a sg -> int = function
+    Pfix sg -> 1 + proc_nargs sg
+  | Prest _ -> 1
+  | Pcont -> 0
+  | Pret -> 0
+  | Pvoid sg -> proc_nargs sg
+;;
+
+(* let args_err p n = *)
+(*   if p.proc_has_rest then *)
+(*     Printf.sprintf "procedure %s expected %d or more args got %d" *)
+(*       p.proc_name (p.proc_nargs - 1) n *)
+(*   else *)
+(*     Printf.sprintf "procedure %s expected %d args got %d" *)
+(*       p.proc_name p.proc_nargs n *)
+
+(* let chkargs p n = *)
+(*   match p with *)
+(*     Sproc (p, _) -> *)
+(*       if n <> p.proc_nargs && (not p.proc_has_rest || n < p.proc_nargs - 1) then *)
+(*         raise (Error (args_err p n)) *)
+(*       else *)
+(*         () *)
+(*   | Sprim p -> *)
+(*       if *)
+(*         begin *)
+(*           match p.prim_fun with *)
+(*             Pf0 _ -> n = 0 *)
+(*           | Pf1 _ -> n = 1 *)
+(*           | Pf2 _ -> n = 2 *)
+(*           | Pf3 _ -> n = 3 *)
+(*           | Pfn _ | Pfcn _ -> true *)
+(*         end *)
+(*       then *)
+(*         () *)
+(*       else *)
+(*         raise (Error (p.prim_name ^ ": wrong number of arguments")) *)
+(*   | _ -> raise (Error "apply: not a procedure or primitive") *)
+(* ;; *)
 
 (* let rec doapply th cc p disp av = *)
 (*   let th = { *)
@@ -77,7 +94,7 @@ let chkargs p n =
 (*       Array.blit av 0 th.th_frame 0 p.proc_nargs; *)
 (*     eval th cc p.proc_body *)
 
-let rec stage th cc =
+let rec stage e cc =
   function
     Cval v -> cc .< v >.
   | Cseq [| |] ->
@@ -86,9 +103,9 @@ let rec stage th cc =
       let n = Array.length s in
         let rec loop i =
           if i = n - 1 then
-            stage th cc s.(i)
+            stage e cc s.(i)
           else
-            stage th (fun v -> .< let _ = .~v in .~(loop (i + 1)) >.) s.(i)
+            stage e (fun v -> .< let _ = .~v in .~(loop (i + 1)) >.) s.(i)
         in
           loop 0
   | Cand [| |] ->
@@ -100,9 +117,9 @@ let rec stage th cc =
                let rec loop i =
                  begin
                    if i = n - 1 then
-                     stage th (fun x -> .< cc .~x >.) s.(i)
+                     stage e (fun x -> .< cc .~x >.) s.(i)
                    else
-                     stage th
+                     stage e
                        (fun v ->
                           .< match .~v with
                                Sfalse -> cc Sfalse
@@ -120,9 +137,9 @@ let rec stage th cc =
              .~begin
                let rec loop i =
                  if i = n - 1 then
-                   stage th (fun x -> .< cc .~x >.) s.(i)
+                   stage e (fun x -> .< cc .~x >.) s.(i)
                  else
-                   stage th
+                   stage e
                      (fun v ->
                         .< match .~v with
                              Sfalse -> .~(loop (i + 1))
@@ -133,30 +150,30 @@ let rec stage th cc =
              end >.
   | Cif (c, tx, fx) ->
       .< let cc x = .~(cc .< x >.) in
-           .~(stage th
+           .~(stage e
                 (fun v ->
                    .< match .~v with
-                        Sfalse -> .~(stage th (fun x -> .< cc .~x >.) fx)
-                      | _ -> .~(stage th (fun x -> .< cc .~x >.) tx) >.)
+                        Sfalse -> .~(stage e (fun x -> .< cc .~x >.) fx)
+                      | _ -> .~(stage e (fun x -> .< cc .~x >.) tx) >.)
                 c) >.
   | Csetg (g, c) ->
-      stage th (fun v ->
+      stage e (fun v ->
           let err = "set!: unbound variable " ^ (sym_name g.g_sym) in
             .< if g.g_val == Sunbound then
                  raise (Error err)
                else
                  let () = g.g_val <- .~v in .~(cc .< Sunspec >.) >.) c
-  (* | Csetl (d, i, c) -> *)
-  (*     eval th (fun v -> setl th d i v; cc Sunspec) c *)
+  | Csetl (i, c) ->
+      stage e (fun v -> .< let () = .~(setl e i v) in .~(cc .< Sunspec >.) >.) c
   | Cdefine (g, c) ->
-      stage th (fun v -> .< let () = g.g_val <- .~v in .~(cc .< Sunspec >.) >.) c
+      stage e (fun v -> .< let () = g.g_val <- .~v in .~(cc .< Sunspec >.) >.) c
   | Cgetg g ->
       let err = "unbound variable: " ^ (sym_name g.g_sym) in
         .< if g.g_val == Sunbound then
              raise (Error err)
            else
              .~(cc .< g.g_val >.) >.
-  (* | Cgetl (d, i) -> cc (getl th d i) *)
+  | Cgetl i -> cc (getl e i)
   (* | Capply0 c -> *)
   (*     eval th (fun cv -> *)
   (*       chkargs cv 0; *)
@@ -237,18 +254,42 @@ let rec stage th cc =
   (*           eval th (fun x -> av.(i) <- x; loop (i + 1)) a.(i) *)
   (*       in *)
   (*         loop 0) c *)
-  (* | Clambda p -> *)
-  (*     let n = th.th_depth + 1 in *)
-  (*     let nd = Array.init n *)
-  (*       (fun i -> if i < n - 1 then th.th_display.(i) *)
-  (*                 else th.th_frame) *)
-  (*     in *)
-  (*       cc (Sproc (p, nd)) *)
+  | Clambda l ->
+      let is_mutable = function
+          Vloc l -> l.l_mut
+        | Vglob _ -> true
+        | _ -> false
+      in
+      let rec loop cc = function
+          [] -> cc.cc Pcont
+        | [_] when l.lam_has_rest -> cc.cc (Prest Pcont)
+        | _ :: rest -> loop { cc = fun sg -> cc.cc (Pfix sg) } rest
+      in
+      let rec mkargs : type a. _ -> _ -> a sg -> a code = fun e largs sg ->
+        match largs, sg with
+          b :: largs, Pfix sg ->
+            if is_mutable b then
+              .< fun x -> let x = ref x in .~(mkargs (`M .<x>. :: e) largs sg) >.
+            else
+              .< fun x -> .~(mkargs (`I .<x>. :: e) largs sg) >.
+        | [], Pcont ->
+            .< fun cc -> .~(stage e (fun x -> .< cc .~x >.) l.lam_body) >.
+        | [a], Prest Pcont ->
+            assert false
+            (* if is_mutable a then *)
+            (*   .< fun x cc -> let x = ref x in .~(stage (`M .<x>. :: e) (fun x -> .< cc .~x >.) l.lam_body) >. *)
+            (* else *)
+            (*   .< fun x cc -> .~(stage (`I .<x>. :: e) (fun x -> .< cc .~x >.) l.lam_body) >. *)
+        | _ ->
+            assert false
+      in
+      let pf = loop { cc = fun sg -> .< Pf (sg, .~(mkargs e l.lam_args sg), l.lam_name) >. } l.lam_args in
+        cc .< Sproc .~pf >.
   | Cqqp (h, t) ->
       begin
         match h with
           Cqqspl x ->
-            stage th (fun usl -> stage th (fun t ->
+            stage e (fun usl -> stage e (fun t ->
                 let findtl usl t =
                   let rec loop =
                     function
@@ -262,7 +303,7 @@ let rec stage th cc =
                 in
                   cc .< findtl .~usl .~t >.) t) x
         | _ ->
-            stage th (fun h -> stage th (fun t ->
+            stage e (fun h -> stage e (fun t ->
               cc .< Spair { car = .~h; cdr = .~t } >.) t) h
       end
   | Cqqv v ->
@@ -273,7 +314,7 @@ let rec stage th cc =
                  if i = n then
                    cc .< Svector qv >.
                  else
-                   stage th (fun x -> .< let () = qv.(i) <- .~x in .~(loop (i + 1)) >.) v.(i)
+                   stage e (fun x -> .< let () = qv.(i) <- .~x in .~(loop (i + 1)) >.) v.(i)
                in
                  loop 0
              end >.
@@ -283,9 +324,9 @@ let rec stage th cc =
           function
             [] -> cc .< Svector (Array.of_list .~r) >.
           | (Cqqspl x)::t ->
-              stage th (fun l -> loop .< (list_to_caml .~l) @ .~r >. t) x
+              stage e (fun l -> loop .< (list_to_caml .~l) @ .~r >. t) x
           | h::t ->
-              stage th (fun x -> loop .< .~x :: .~r >. t) h
+              stage e (fun x -> loop .< .~x :: .~r >. t) h
         in
           loop .< [] >. (List.rev l)
       end
@@ -312,7 +353,7 @@ let rec stage th cc =
   (*         loop 0 *)
   (*     end *)
   | Ccase (c, m) ->
-      stage th
+      stage e
         (fun v ->
            let n = Array.length m in
              .< let cc x = .~(cc .< x >.) in
@@ -322,7 +363,7 @@ let rec stage th cc =
                       if i < n then
                         begin
                           match m.(i) with
-                            ([| |], b) -> stage th (fun x -> .< cc .~x >.) b
+                            ([| |], b) -> stage e (fun x -> .< cc .~x >.) b
                           | (mv, b) ->
                               let n = Array.length mv in
                               let rec has i =
@@ -335,7 +376,7 @@ let rec stage th cc =
                                   else
                                     .< mvv == v || test_eqv mvv v >.
                               in
-                                .< if .~(has 0) then .~(stage th (fun x -> .< cc .~x >.) b)
+                                .< if .~(has 0) then .~(stage e (fun x -> .< cc .~x >.) b)
                                    else .~(loop (i + 1)) >.
                         end
                       else

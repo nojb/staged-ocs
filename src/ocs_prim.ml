@@ -56,7 +56,7 @@ let is_vector =
 
 let is_proc =
   function
-    Sproc (_, _) | Sprim _ -> Strue
+    Sproc _ | Sprim _ -> Strue
   | _ -> Sfalse
 ;;
 

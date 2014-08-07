@@ -17,6 +17,7 @@ val env_copy : env -> env
 val is_a_keyword : env -> sval -> bool
 val is_keyword : env -> sval -> string -> bool
 val safe_is_keyword : env -> sval -> string -> bool
+val is_mutable : vbind -> bool
 
 val is_syntax : env -> sval -> (env -> sval array -> scode) -> bool
 

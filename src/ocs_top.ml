@@ -55,7 +55,7 @@ let top_loop env th =
           Seof -> ()
         | v ->
             let c = compile env v in
-            let cv = stage .<th>. (fun v ->
+            let cv = stage [] (fun v ->
                 .< match .~v with
                      Sunspec -> ()
                    | r ->

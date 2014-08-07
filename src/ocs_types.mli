@@ -48,7 +48,7 @@ type sval =
 
   (* A closure created by combining the process reference with the
      local environment at that point of execution.  *)
-  | Sproc of sproc * sval array array
+  | Sproc of sproc
 
   (* Primitive function.  *)
   | Sprim of sprim
@@ -102,15 +102,23 @@ and primf =
      and supports a variable number of arguments.  *)
   | Pfcn of (thread -> (sval -> unit) -> sval array -> unit)
 
+and _ sg =
+    Pfix : 'a sg -> (sval -> 'a) sg
+  | Prest : 'a sg -> (sval array -> 'a) sg
+  | Pcont : ((sval -> unit) -> unit) sg
+  | Pret : sval sg
+  | Pvoid : 'a sg -> (unit -> 'a) sg
+
   (* Procedure structure.  *)
 and sproc =
-  {
-    proc_body : scode;
-    proc_nargs : int;
-    proc_has_rest : bool;
-    proc_frame_size : int;
-    mutable proc_name : string
-  }
+    Pf : 'a sg * 'a * string -> sproc
+  (* { *)
+  (*   proc_body : scode; *)
+  (*   proc_nargs : int; *)
+  (*   proc_has_rest : bool; *)
+  (*   proc_frame_size : int; *)
+  (*   mutable proc_name : string *)
+  (* } *)
 
   (* Delayed expression.  *)
 and spromise =
@@ -134,7 +142,7 @@ and scode =
   | Cgetg of gvar
   | Cgetl of int
   | Capply of scode * scode array
-  | Clambda of sproc
+  | Clambda of slambda
   | Cqqp of scode * scode
   | Cqqv of scode array
   | Cqqvs of scode list
@@ -143,6 +151,19 @@ and scode =
   | Ccondspec of scode
   | Ccase of scode * (sval array * scode) array
   | Cdelay of scode
+
+and slambda =
+  {
+    lam_body : scode;
+    lam_args : vbind list;
+    lam_has_rest : bool;
+    lam_name : string
+  }
+
+and 'b slambda_c =
+  {
+    cc : 'a. 'a sg -> 'b
+  }
 
   (* Global variable slot.  *)
 and gvar =
@@ -162,10 +183,16 @@ and thread =
     th_dynext : dynext option		(* Current dynamic extent.  *)
   }
 
+and vloc =
+  {
+    mutable l_mut : bool;
+    l_pos : int
+  }
+
   (* Bindings, used during analysis.  *)
 and vbind =
     Vglob of gvar
-  | Vloc of int
+  | Vloc of vloc
   | Vsyntax of (env -> sval array -> scode)
   | Vmacro of (env -> sval array -> sval)
   | Vkeyword of string
