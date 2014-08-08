@@ -210,6 +210,7 @@ let rec stage e th cc =
           loop sg .< f >. (Array.to_list av)
       end
   | Capply (Clambda l, a) ->
+      let e0 = e in
       let rec loop e args vals =
         match args, vals with
           [], [] ->
@@ -218,7 +219,7 @@ let rec stage e th cc =
             let rec mkrest cc = function
                 [] -> cc .< Snull >.
               | v :: vals ->
-                  stage e th
+                  stage e0 th
                     (fun v ->
                        mkrest (fun vals -> cc .< Spair { car = .~v; cdr = .~vals } >.) vals)
                     v
@@ -230,9 +231,9 @@ let rec stage e th cc =
                     .< let x = .~rest in .~(loop (`I .< x >. :: e) [] []) >.) vals
         | a :: args, v :: vals ->
             if Ocs_env.is_mutable a then
-              stage e th (fun v -> .< let x = ref .~v in .~(loop (`M .< x >. :: e) args vals) >.) v
+              stage e0 th (fun v -> .< let x = ref .~v in .~(loop (`M .< x >. :: e) args vals) >.) v
             else
-              stage e th (fun v -> .< let x = .~v in .~(loop (`I .< x >. :: e) args vals) >.) v
+              stage e0 th (fun v -> .< let x = .~v in .~(loop (`I .< x >. :: e) args vals) >.) v
         | _ ->
             raise (Error "apply: wrong number of arguments")
       in
