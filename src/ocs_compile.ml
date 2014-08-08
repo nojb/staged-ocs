@@ -302,10 +302,10 @@ and mkletrec e args =
     Array.map (letsplit (fun s v -> let r = bind_var ne s in largs := r :: !largs; (r, v)))
       (Array.of_list (list_to_caml args.(0))) in
   let largs = List.rev !largs in
-  let avi = Array.map (fun (r, v) -> compile ne v) av in
+  let avi = Array.map (fun (_, v) -> compile ne v) av in
   let ne' = new_frame ne in
   let largs' = ref [] in
-  let sets = Array.map (fun (r, v) ->
+  let sets = Array.map (fun (r, _) ->
       let rr = new_var ne' in
         largs' := rr :: !largs';
         gendef r (genref rr)) av in
@@ -313,9 +313,9 @@ and mkletrec e args =
   let body = Cseq (Array.append sets
     (mkbody ne' (Array.sub args 1 (Array.length args - 1)))) in
   let proc =
-    Clambda (make_lambda body largs false) in
+    Clambda (make_lambda body largs' false) in
   let proc =
-    Clambda (make_lambda (Capply (proc, avi)) largs' false)
+    Clambda (make_lambda (Capply (proc, avi)) largs false)
   in
     Capply (proc, Array.map (fun _ -> Cval Sunspec) av)
 
