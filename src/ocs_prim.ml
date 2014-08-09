@@ -114,58 +114,56 @@ let force p cc =
 ;;
 
 let map_for_each av th cc is_map =
-  let my_name = if is_map then "map" else "for-each"
-  and na = Array.length av - 1 in
-    if na <= 0 then
-      raise (Error (my_name ^ ": bad args"));
-    let proc = av.(0)
-    and get_cdr =
-      function
-        Spair { car = _; cdr = t } -> t
-      | _ -> raise (Error (my_name ^ ": list lengths don't match"))
-    and get_carc =
-      function
-        Spair { car = h; cdr = _ } -> h
-      | _ -> raise (Error (my_name ^ ": list lengths don't match"))
-    and result = ref (if is_map then Snull else Sunspec)
-    and rtail = ref Snull in
-    let append v =
-      if !rtail == Snull then
-        begin
-          result := Spair { car = v; cdr = Snull };
-          rtail := !result;
-        end
-      else
-        begin
-          match !rtail with
-            Spair p ->
-              p.cdr <- Spair { car = v; cdr = Snull };
-              rtail := p.cdr
-          | _ -> assert false
-        end
-    in
-      let rec loop args =
-        match args.(0) with
-          Snull -> cc !result
-        | Spair _ ->
-            doapply th
-              (fun v ->
-                if is_map then append v;
-                loop (Array.map get_cdr args))
-              proc (Array.to_list (Array.map get_carc args))
-        | _ -> raise (Error (my_name ^ ": invalid argument lists"))
-      in
-        loop (Array.sub av 1 na)
+  let my_name = if is_map then "map" else "for-each" in
+    match av with
+      [] | _ :: [] ->
+        raise (Error (my_name ^ ": bad args"))
+    | proc :: args ->
+        let get_cdr =
+          function
+            Spair { car = _; cdr = t } -> t
+          | _ -> raise (Error (my_name ^ ": list lengths don't match"))
+        and get_carc =
+          function
+            Spair { car = h; cdr = _ } -> h
+          | _ -> raise (Error (my_name ^ ": list lengths don't match"))
+        and result = ref (if is_map then Snull else Sunspec)
+        and rtail = ref Snull in
+        let append v =
+          if !rtail == Snull then
+            begin
+              result := Spair { car = v; cdr = Snull };
+              rtail := !result;
+            end
+          else
+            begin
+              match !rtail with
+                Spair p ->
+                  p.cdr <- Spair { car = v; cdr = Snull };
+                  rtail := p.cdr
+              | _ -> assert false
+            end
+        in
+        let rec loop args =
+          match args with
+            Snull :: _ -> cc !result
+          | Spair _ :: _ ->
+              doapply th
+                (fun v ->
+                   if is_map then append v;
+                   loop (List.map get_cdr args))
+                proc (List.map get_carc args)
+          | _ -> raise (Error (my_name ^ ": invalid argument lists"))
+        in
+          loop args
 ;;
 
 let map av th cc =
-  (* map_for_each av th cc true *)
-  assert false
+  map_for_each av th cc true
 ;;
 
 let for_each av th cc =
-  (* map_for_each av th cc false *)
-  assert false
+  map_for_each av th cc false
 ;;
 
 let load_file e th name =

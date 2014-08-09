@@ -102,24 +102,24 @@ and procf =
      evaluation.  *)
 and scode =
     Cval of sval
-  | Cseq of scode array
-  | Cand of scode array
-  | Cor of scode array
+  | Cseq of scode list
+  | Cand of scode list
+  | Cor of scode list
   | Cif of scode * scode * scode
   | Csetg of gvar * scode
   | Csetl of int * scode
   | Cdefine of gvar * scode
   | Cgetg of gvar
   | Cgetl of int
-  | Capply of scode * scode array
+  | Capply of scode * scode list
   | Clambda of slambda
   | Cqqp of scode * scode
-  | Cqqv of scode array
+  | Cqqv of scode list
   | Cqqvs of scode list
   | Cqqspl of scode
-  | Ccond of (scode * scode) array
+  | Ccond of (scode * scode) list
   | Ccondspec of scode
-  | Ccase of scode * (sval array * scode) array
+  | Ccase of scode * (sval list * scode) list
   | Cdelay of scode
 
 and slambda =
@@ -163,7 +163,7 @@ and vloc =
 and vbind =
     Vglob of gvar
   | Vloc of vloc
-  | Vsyntax of (env -> sval array -> scode)
+  | Vsyntax of (env -> sval list -> scode)
   | Vmacro of (env -> sval array -> sval)
   | Vkeyword of string
 

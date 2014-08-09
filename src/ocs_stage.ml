@@ -88,57 +88,51 @@ let rec doapply th (cc : sval -> unit) p av =
 let rec stage e th cc =
   function
     Cval v -> cc .< v >.
-  | Cseq [| |] ->
-      cc .< Sunspec >.
   | Cseq s ->
-      let n = Array.length s in
-        let rec loop i =
-          if i = n - 1 then
-            stage e th cc s.(i)
-          else
-            stage e th (fun v -> .< let _ = .~v in .~(loop (i + 1)) >.) s.(i)
-        in
-          loop 0
-  | Cand [| |] ->
-      cc .< Strue >.
+      let rec loop =
+        function
+          [] ->
+            cc .< Sunspec >.
+        | s :: [] ->
+            stage e th cc s
+        | s :: sl ->
+            stage e th (fun v -> .< let _ = .~v in .~(loop sl) >.) s
+      in
+      loop s
   | Cand s ->
-      let n = Array.length s in
-        .< let cc x = .~(cc .< x >.) in
-             .~begin
-               let rec loop i =
-                 begin
-                   if i = n - 1 then
-                     stage e th (fun x -> .< cc .~x >.) s.(i)
-                   else
-                     stage e th
-                       (fun v ->
-                          .< match .~v with
-                               Sfalse -> cc Sfalse
-                             | _ -> .~(loop (i + 1)) >.)
-                       s.(i)
-                 end
-               in
-                 loop 0
-             end >.
-  | Cor [| |] ->
-      cc .< Sfalse >.
-  | Cor s ->
-      let n = Array.length s in
-        .< let cc x = .~(cc .< x >.) in
-             .~begin
-               let rec loop i =
-                 if i = n - 1 then
-                   stage e th (fun x -> .< cc .~x >.) s.(i)
-                 else
+      .< let cc x = .~(cc .< x >.) in
+           .~begin
+             let rec loop =
+               function
+                 [] -> .< cc Strue >.
+               | s :: [] ->
+                   stage e th (fun x -> .< cc .~x >.) s
+               | s :: sl ->
                    stage e th
                      (fun v ->
                         .< match .~v with
-                             Sfalse -> .~(loop (i + 1))
-                           | x -> cc x >.)
-                     s.(i)
-               in
-                 loop 0
-             end >.
+                             Sfalse -> cc Sfalse
+                           | _ -> .~(loop sl) >.) s
+             in
+               loop s
+           end >.
+  | Cor s ->
+      .< let cc x = .~(cc .< x >.) in
+           .~begin
+             let rec loop =
+               function
+                 [] -> .< cc Sfalse >.
+               | s :: [] ->
+                   stage e th (fun x -> .< cc .~x >.) s
+               | s :: sl ->
+                   stage e th
+                     (fun v ->
+                        .< match .~v with
+                             Sfalse -> .~(loop sl)
+                           | x -> cc x >.) s
+             in
+               loop s
+           end >.
   | Cif (c, tx, fx) ->
       .< let cc x = .~(cc .< x >.) in
            .~(stage e th
@@ -199,15 +193,15 @@ let rec stage e th cc =
           | Pvoid sg, _ ->
               loop sg .< .~f () >. al
           | Pcont, _ :: _ ->
-              raise (Error (args_err sg p.proc_name (Array.length av)))
+              raise (Error (args_err sg p.proc_name (List.length av)))
           | Pret, _ :: _ ->
-              raise (Error (args_err sg p.proc_name (Array.length av)))
+              raise (Error (args_err sg p.proc_name (List.length av)))
           | Pfix _, [] ->
-              raise (Error (args_err sg p.proc_name (Array.length av)))
+              raise (Error (args_err sg p.proc_name (List.length av)))
           | Pthread sg, _ ->
               loop sg .< .~f .~th >. al
         in
-          loop sg .< f >. (Array.to_list av)
+          loop sg .< f >. av
       end
   | Capply (Clambda l, a) ->
       let e0 = e in
@@ -237,7 +231,7 @@ let rec stage e th cc =
         | _ ->
             raise (Error "apply: wrong number of arguments")
       in
-        loop e l.lam_args (Array.to_list a)
+        loop e l.lam_args a
   | Capply (c, a) ->
       stage e th
         (fun cv ->
@@ -252,7 +246,7 @@ let rec stage e th cc =
                  in
                    loop
                      (fun al -> .< doapply .~th (fun x -> .~(cc .<x>.)) f .~al >.)
-                     (Array.to_list a)
+                     a
                end >.) c
   | Clambda l ->
       let rec loop cc = function
@@ -304,17 +298,16 @@ let rec stage e th cc =
               cc .< Spair { car = .~h; cdr = .~t } >.) t) h
       end
   | Cqqv v ->
-      let n = Array.length v in
+      let n = List.length v in
         .< let qv = Array.make n Snull in
              .~begin
                let rec loop i =
-                 if i = n then
-                   cc .< Svector qv >.
-                 else
-                   stage e th
-                     (fun x -> .< let () = qv.(i) <- .~x in .~(loop (i + 1)) >.) v.(i)
+                 function
+                   [] -> cc .< Svector qv >.
+                 | v :: vl ->
+                     stage e th (fun x -> .< let () = qv.(i) <- .~x in .~(loop (i+1) vl) >.) v
                in
-                 loop 0
+                 loop 0 v
              end >.
   | Cqqvs l ->
       begin
@@ -330,65 +323,58 @@ let rec stage e th cc =
       end
   | Cqqspl x -> raise (Error "unquote-splicing: not valid here")
   | Ccond av ->
-      let n = Array.length av in
-        .< let cc x = .~(cc .<x>.) in
-             .~begin
-               let rec loop i =
-                 if i < n then
-                   begin
-                     match av.(i) with
-                       (Ccondspec c, b) ->
-                         stage e th
-                           (fun v ->
-                             .< match .~v with
-                                  Sfalse -> .~(loop (i+1))
-                                | _ as v ->
-                                    .~(stage e th (fun b -> .< doapply .~th cc .~b [ v ] >.) b) >.)
-                           c
-                     | (c, b) ->
-                         stage e th
-                           (fun v ->
-                             .< match .~v with
-                                  Sfalse -> .~(loop (i+1))
-                                | _ -> .~(stage e th (fun x -> .< cc .~x >.) b) >.) c
-                   end
-                 else
+      .< let cc x = .~(cc .<x>.) in
+           .~begin
+             let rec loop =
+               function
+                 [] ->
                    .< cc Sunspec >.
-               in
-                 loop 0
-             end >.
+               | (Ccondspec c, b) :: al ->
+                   stage e th
+                     (fun v ->
+                        .< match .~v with
+                             Sfalse -> .~(loop al)
+                           | _ as v ->
+                               .~(stage e th (fun b -> .< doapply .~th cc .~b [ v ] >.) b) >.)
+                     c
+               | (c, b) :: al ->
+                   stage e th
+                     (fun v ->
+                        .< match .~v with
+                             Sfalse -> .~(loop al)
+                           | _ -> .~(stage e th (fun x -> .< cc .~x >.) b) >.) c
+             in
+               loop av
+           end >.
   | Ccase (c, m) ->
       stage e th
         (fun v ->
-           let n = Array.length m in
-             .< let cc x = .~(cc .< x >.) in
-                let v = .~v in
-                  .~begin
-                    let rec loop i =
-                      if i < n then
-                        begin
-                          match m.(i) with
-                            ([| |], b) -> stage e th (fun x -> .< cc .~x >.) b
-                          | (mv, b) ->
-                              let n = Array.length mv in
-                              let rec has i =
-                                let mvv = mv.(i) in
-                                  if i < n - 1 then
-                                    begin
-                                      let mvv = mv.(i) in
-                                        .< mvv == v || test_eqv mvv v || .~(has (i+1)) >.
-                                    end
-                                  else
-                                    .< mvv == v || test_eqv mvv v >.
-                              in
-                                .< if .~(has 0) then .~(stage e th (fun x -> .< cc .~x >.) b)
-                                   else .~(loop (i + 1)) >.
-                        end
-                      else
+           .< let cc x = .~(cc .< x >.) in
+              let v = .~v in
+                .~begin
+                  let rec loop =
+                    function
+                      [] ->
                         .< cc Sunspec >.
-                    in
-                      loop 0
-                  end >.) c
+                    | ([], b) :: _ ->
+                        stage e th (fun x -> .< cc .~x >.) b
+                    | (mv, b) :: ml ->
+                        let rec has =
+                          function
+                            [] ->
+                              assert false
+                          | mvv :: [] ->
+                              .< mvv == v || test_eqv mvv v >.
+                          | mvv :: mvvl ->
+                              .< mvv == v || test_eqv mvv v || .~(has mvvl) >.
+                        in
+                          .< if .~(has mv) then
+                               .~(stage e th (fun x -> .< cc .~x >.) b)
+                             else
+                               .~(loop ml) >.
+                  in
+                    loop m
+                end >.) c
   | Cdelay c ->
       .< let p = let r = ref None in fun cc ->
            match !r with

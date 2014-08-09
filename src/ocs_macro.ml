@@ -393,7 +393,7 @@ let expand name me rs e av =
 
 let mkdefine_syntax e =
   function
-    [| (Ssymbol _ | Sesym (_, _)) as sym; tspec |] ->
+    [ (Ssymbol _ | Sesym (_, _)) as sym; tspec ] ->
       let rules = parsetspec (new_scope e) sym tspec in
         bind_name e sym (Vmacro (expand (normalize_name sym) e
                                         { r_rules = rules }));
@@ -401,32 +401,36 @@ let mkdefine_syntax e =
   | _ -> raise (Error "define-syntax: bad args")
 ;;
 
-let mklet_syntax e args =
-  if Array.length args < 2 then
-    raise (Error "let-syntax: too few args");
-  let av =
-    Array.map (letsplit (fun s v -> s,
-      Vmacro (expand (normalize_name s) e { r_rules = parsetspec e s v })))
-              (Array.of_list (list_to_caml args.(0))) in
-  let ne = new_scope e in
-    Array.iter (fun (s, r) -> bind_name ne s r) av;
-    Cseq (mkbody ne (Array.sub args 1 (Array.length args - 1)))
+let mklet_syntax e =
+  function
+    [] | _ :: [] ->
+      raise (Error "let-syntax: too few args")
+  | a0 :: args ->
+      let av =
+        List.map (letsplit (fun s v -> s,
+                                        Vmacro (expand (normalize_name s) e { r_rules = parsetspec e s v })))
+          (list_to_caml a0) in
+      let ne = new_scope e in
+        List.iter (fun (s, r) -> bind_name ne s r) av;
+        Cseq (mkbody ne args)
 ;;
 
-let mkletrec_syntax e args =
-  if Array.length args < 2 then
-    raise (Error "letrec-syntax: too few args");
-  let ne = new_scope e in
-  let t =
-    Array.map (letsplit
-      (fun s v -> let r = { r_rules = [] }
-                  and name = normalize_name s in
-                    bind_name ne s (Vmacro (expand name ne r));
-                    r, s, v))
-      (Array.of_list (list_to_caml args.(0)))
-  in
-    Array.iter (fun (r, s, v) -> r.r_rules <- parsetspec (new_scope e) s v) t;
-    Cseq (mkbody ne (Array.sub args 1 (Array.length args - 1)))
+let mkletrec_syntax e =
+  function
+    [] | _ :: [] ->
+      raise (Error "letrec-syntax: too few args")
+  | a0 :: args ->
+      let ne = new_scope e in
+      let t =
+        List.map (letsplit
+                     (fun s v -> let r = { r_rules = [] }
+                       and name = normalize_name s in
+                         bind_name ne s (Vmacro (expand name ne r));
+                         r, s, v))
+          (list_to_caml a0)
+      in
+        List.iter (fun (r, s, v) -> r.r_rules <- parsetspec (new_scope e) s v) t;
+        Cseq (mkbody ne args)
 ;;
 
 let bind_macro e =
