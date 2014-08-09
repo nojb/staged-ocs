@@ -20,9 +20,9 @@ let get_stdout th =
 
 let read th cc =
   function
-    [| |] ->
+    [] ->
       cc (Ocs_read.read_from_port (get_stdin th))
-  | [| Sport port |] -> cc (Ocs_read.read_from_port port)
+  | [ Sport port ] -> cc (Ocs_read.read_from_port port)
   | _ -> raise (Error "read: bad args")
 ;;
 
@@ -34,8 +34,8 @@ let rdchr p cc =
 
 let read_char th cc =
   function
-    [| |] -> rdchr (get_stdin th) cc
-  | [| Sport port |] -> rdchr port cc
+    [ ] -> rdchr (get_stdin th) cc
+  | [ Sport port ] -> rdchr port cc
   | _ -> raise (Error "read-char: bad args")
 ;;
 
@@ -49,8 +49,8 @@ let peekchr p cc =
 
 let peek_char th cc =
   function
-    [| |] -> peekchr (get_stdin th) cc
-  | [| Sport port |] -> peekchr port cc
+    [ ] -> peekchr (get_stdin th) cc
+  | [ Sport port ] -> peekchr port cc
   | _ -> raise (Error "peek-char: bad args")
 ;;
 
@@ -66,52 +66,52 @@ let chrdy p cc =
 
 let char_ready th cc =
   function
-    [| |] -> chrdy (get_stdin th) cc
-  | [| Sport port |] -> chrdy port cc
+    [ ] -> chrdy (get_stdin th) cc
+  | [ Sport port ] -> chrdy port cc
   | _ -> raise (Error "char-ready?: bad args")
 ;;
 
 let display th cc =
   function
-    [| obj |] ->
+    [ obj ] ->
       let p = get_stdout th in print p true obj; Ocs_port.flush p; cc Sunspec
-  | [| obj; Sport p |] -> print p true obj; Ocs_port.flush p; cc Sunspec
+  | [ obj; Sport p ] -> print p true obj; Ocs_port.flush p; cc Sunspec
   | _ -> raise (Error "display: bad args")
 ;;
 
 let write th cc =
   function
-    [| obj |] ->
+    [ obj ] ->
       let p = get_stdout th in print p false obj; Ocs_port.flush p; cc Sunspec
-  | [| obj; Sport p |] -> print p false obj; Ocs_port.flush p; cc Sunspec
+  | [ obj; Sport p ] -> print p false obj; Ocs_port.flush p; cc Sunspec
   | _ -> raise (Error "write: bad args")
 ;;
 
 let write_char th cc =
   function
-    [| Schar c |] ->
+    [ Schar c ] ->
       let p = get_stdout th in Ocs_port.putc p c; Ocs_port.flush p; cc Sunspec
-  | [| Schar c; Sport p |] -> Ocs_port.putc p c; Ocs_port.flush p; cc Sunspec
+  | [ Schar c; Sport p ] -> Ocs_port.putc p c; Ocs_port.flush p; cc Sunspec
   | _ -> raise (Error "write-char: bad args")
 ;;
 
 let newline th cc =
   function
-    [| |] ->
+    [ ] ->
       let p = get_stdout th in Ocs_port.putc p '\n'; Ocs_port.flush p; cc Sunspec
-  | [| Sport p |] -> Ocs_port.putc p '\n'; Ocs_port.flush p; cc Sunspec
+  | [ Sport p ] -> Ocs_port.putc p '\n'; Ocs_port.flush p; cc Sunspec
   | _ -> raise (Error "newline: bad args")
 ;;
 
 let current_input th cc =
   function
-    [| |] -> cc th.th_stdin
+    [ ] -> cc th.th_stdin
   | _ -> raise (Error "current-input-port: bad args")
 ;;
 
 let current_output th cc =
   function
-    [| |] -> cc th.th_stdout
+    [ ] -> cc th.th_stdout
   | _ -> raise (Error "current-output-port: bad args")
 ;;
 

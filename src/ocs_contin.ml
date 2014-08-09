@@ -55,8 +55,8 @@ let call_cc proc th cc =
   let cont =
     let continuation al _ =
       match al with
-        [| x |] -> cc x
-      | _ -> cc (Svalues al)
+        [ x ] -> cc x
+      | _ -> cc (Svalues (Array.of_list al))
     in
     Sproc { proc_name = "<continuation>";
             proc_is_prim = false;
@@ -67,8 +67,8 @@ let call_cc proc th cc =
 
 let values =
   function
-    [| x |] -> x
-  | av -> Svalues av
+    [ x ] -> x
+  | av -> Svalues (Array.of_list av)
 ;;
 
 let call_values producer consumer th cc =

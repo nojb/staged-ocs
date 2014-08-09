@@ -97,17 +97,12 @@ let is_equal a b =
 ;;
 
 let do_apply f av th cc =
-  let n = Array.length av in
-  if n = 0 then raise (Error "apply: bad args");
-  let rec loop i r =
-    if i < 0 then
-      r
-    else if i = n - 1 then  (* r must be [] *)
-      loop (i - 1) (list_to_caml av.(i))
-    else
-      loop (i - 1) (av.(i)::r)
+  let rec loop = function
+      [] -> raise (Error "apply: bad args")
+    | [a] -> list_to_caml a
+    | a :: av -> a :: loop av
   in
-  let args = (loop (n - 1) []) in
+  let args = loop av in
     doapply th cc f args
 ;;
 
@@ -164,11 +159,13 @@ let map_for_each av th cc is_map =
 ;;
 
 let map av th cc =
-  map_for_each av th cc true
+  (* map_for_each av th cc true *)
+  assert false
 ;;
 
 let for_each av th cc =
-  map_for_each av th cc false
+  (* map_for_each av th cc false *)
+  assert false
 ;;
 
 let load_file e th name =
@@ -192,9 +189,9 @@ let load_prim e a th cc =
   | _ -> raise (Error "load: invalid name argument")
 ;;
 
-let eval_prim av th cc =
-  match av with
-    [| expr; Sesym (e, _) |] ->
+let eval_prim expr e th cc =
+  match e with
+    Sesym (e, _) ->
       let c = compile e expr in
       let sc = stage [] .< th >. (fun x -> .< cc .~x >.) c in
         Runcode.run sc
@@ -243,7 +240,7 @@ let init e =
   set_pfg e (Prest (Pthread Pcont)) for_each "for-each";
 
   set_pfg e (Pfix (Pthread Pcont)) (load_prim e) "load";
-  set_pfg e (Prest (Pthread Pcont)) eval_prim "eval";
+  set_pfg e (Pfix (Pfix (Pthread Pcont))) eval_prim "eval";
 
   set_pf1 e (report_env (env_copy e)) "scheme-report-environment";
   set_pf1 e null_env "null-environment";

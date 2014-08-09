@@ -245,34 +245,22 @@ let string_to_num str ub =
         | None -> a
 ;;
 
-let snum_strtonum av =
-  match Array.length av with
-    (1 | 2) as n ->
-      let r =
-        if n = 2 then
-          begin
-            match av.(1) with
-              Sint i -> i
-            | _ -> raise (Error "string->number: invalid radix")
-          end
-        else
-          0
-      in
-        begin
-          match av.(0) with
-            Sstring s ->
-              begin
-                try
-                  if s = "" then
-                    Sfalse
-                  else
-                    string_to_num s r
-                with
-                  _ -> Sfalse
-              end
-          | _ -> raise (Error "string->number: not a string")
-        end
-  | _ -> raise (Error "string->number: wrong number of args")
+let snum_strtonum =
+  function
+    Sstring "" :: Sint _ :: []
+  | Sstring "" :: [] ->
+      Sfalse
+  | Sstring s :: [] ->
+      begin try string_to_num s 0 with _ -> Sfalse end
+  | Sstring s :: Sint r :: [] ->
+      begin try string_to_num s r with _ -> Sfalse end
+  | _ :: []
+  | _ :: Sint _ :: [] ->
+      raise (Error "string->number: not a string")
+  | _ :: _ :: [] ->
+      raise (Error "string->number: invalid radix")
+  | _ ->
+      raise (Error "string->number: wrong number of args")
 ;;
 
 let string_of_real_s r =
@@ -381,14 +369,14 @@ let ntostr base =
 
 let rec snum_numtostr =
   function
-    [| Sint i |] -> Sstring (string_of_int i)
-  | [| Sbigint bi |] -> Sstring (string_of_big_int bi)
-  | [| Srational r |] -> Sstring (string_of_ratio r)
-  | [| Sreal r |] -> Sstring (string_of_real r)
-  | [| Scomplex z |] -> Sstring (string_of_complex z)
-  | [| snum; Sint radix |] ->
+    [ Sint i ] -> Sstring (string_of_int i)
+  | [ Sbigint bi ] -> Sstring (string_of_big_int bi)
+  | [ Srational r ] -> Sstring (string_of_ratio r)
+  | [ Sreal r ] -> Sstring (string_of_real r)
+  | [ Scomplex z ] -> Sstring (string_of_complex z)
+  | [ snum; Sint radix ] ->
       if radix = 10 then
-        snum_numtostr [| snum |]
+        snum_numtostr [ snum ]
       else if radix = 2 || radix = 8 || radix = 16 then
         Sstring (ntostr radix snum)
       else

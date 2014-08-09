@@ -69,7 +69,7 @@ let rec doapply th (cc : sval -> unit) p av =
             in
               loop sg (f (mkrest al)) []
         | Prest sg, _ ->
-            loop sg (f (Array.of_list al)) []
+            loop sg (f al) []
         | Pvoid sg, _ ->
             loop sg (f ()) al
         | Pcont, _ :: _ ->
@@ -195,7 +195,7 @@ let rec stage e th cc =
                 | a :: al ->
                     stage e th (fun a -> mkrest (fun al -> cc .< .~a :: .~al >.) al) a
               in
-                mkrest (fun al -> loop sg .< .~f (Array.of_list .~al) >. []) al
+                mkrest (fun al -> loop sg .< .~f .~al >. []) al
           | Pvoid sg, _ ->
               loop sg .< .~f () >. al
           | Pcont, _ :: _ ->

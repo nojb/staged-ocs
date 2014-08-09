@@ -8,11 +8,12 @@ open Ocs_misc
 (* Primitives *)
 
 let make_list av =
-  let rec loop i r =
-    if i < 0 then r
-    else loop (i - 1) (Spair { car = Array.unsafe_get av i; cdr = r })
+  let rec loop c = function
+      [] -> c Snull
+    | a :: al ->
+        loop (fun al -> c (Spair { car = a; cdr = al })) al
   in
-    loop (Array.length av - 1) Snull
+  loop (fun c -> c) av
 ;;
 
 let cons h t =
@@ -114,18 +115,14 @@ let cptl tl =
   | _ -> raise (Error "append: bad list")
 ;;
 
-let append =
-  function
-    [| |] -> Snull
-  | av ->
-      let n = Array.length av in
-      let rec loop i tl =
-        if i >= 0 then
-          loop (i - 1) (cptl tl av.(i))
-        else
-          tl
-      in
-        loop (n - 2) av.(n - 1)
+let append av =
+  let rec loop c =
+    function
+      [] -> c Snull
+    | a :: al ->
+        loop (fun al -> c (cptl al a)) al
+  in
+    loop (fun c -> c) av
 ;;
 
 let list_tail l =

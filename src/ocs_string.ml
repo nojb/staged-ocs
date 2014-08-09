@@ -6,19 +6,22 @@ open Ocs_env
 
 let make_string =
   function 
-    [| Sint k |] -> Sstring (String.create k)
-  | [| Sint k; Schar c |] -> Sstring (String.make k c)
+    [ Sint k ] -> Sstring (String.create k)
+  | [ Sint k; Schar c ] -> Sstring (String.make k c)
   | _ -> raise (Error "make-string: bad args")
 ;;
 
 let string_of av =
-  let n = Array.length av in
+  let n = List.length av in
   let s = String.create n in
-    for i = 0 to n - 1 do
-      match av.(i) with
-        Schar c -> s.[i] <- c
-      | _ -> raise (Error "string: bad args")
-    done;
+  let rec loop i = function
+      [] -> ()
+    | Schar c :: al ->
+        s.[i] <- c; loop (i+1) al
+    | _ ->
+        raise (Error "string: bad args")
+  in
+    loop 0 av;
     Sstring s
 ;;
 
@@ -76,11 +79,9 @@ let string_ci_le = string_ci_cmp (<=);;
 let string_ci_ge = string_ci_cmp (>=);;
 
 let string_append av =
-  Sstring
-    (Array.fold_left (^) ""
-      (Array.map (function
-                    Sstring s -> s
-                  | _ -> raise (Error "string-append: bad args")) av))
+  Sstring (String.concat ""
+             (List.map
+                (function Sstring s -> s | _ -> raise (Error "string-append: bad args")) av))
 ;;
 
 let substring s sp ep =

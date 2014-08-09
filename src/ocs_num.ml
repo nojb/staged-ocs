@@ -207,88 +207,69 @@ let is_odd =
   | _ -> raise (Error "odd?: bad arg type")
 ;;
 
-let do_ops op av n =
-  let rec oploop v i =
-    if i < n then
-      let r = op v av.(i) in
-        oploop r (i + 1)
-    else
-      v
-  in
-    oploop av.(0) 1
-;;
-
-let snum_add av =
-  let n = Array.length av in
-    if n = 0 then
+let snum_add =
+  function
+    [] ->
       Sint 0
-    else
-      do_ops add2 av n
+  | a :: al ->
+      List.fold_left add2 a al
 ;;
 
-let snum_sub av =
-  match Array.length av with
-    0 -> raise (Error "-: need args")
-  | 1 -> negate av.(0)
-  | n -> do_ops sub2 av n
+let snum_sub =
+  function
+    [] -> raise (Error "-: need args")
+  | a :: [] -> negate a
+  | a :: al -> List.fold_left sub2 a al
 ;;
 
-let snum_mul av =
-  match Array.length av with
-    0 -> Sint 1
-  | n -> do_ops mul2 av n
+let snum_mul =
+  function
+    [] -> Sint 1
+  | a :: al -> List.fold_left mul2 a al
 ;;
 
-let snum_div av =
-  match Array.length av with
-    0 -> raise (Error "/: need args")
-  | 1 -> div2 (Sint 1) av.(0)
-  | n -> do_ops div2 av n
+let snum_div =
+  function
+    [] -> raise (Error "/: need args")
+  | a :: [] -> div2 (Sint 1) a
+  | a :: al -> List.fold_left div2 a al
 ;;
 
-let snum_eq av =
-  match Array.length av with
-    0 | 1 -> Strue
-  | n ->
-      let a0 = av.(0) in
-      let rec loop i =
-        if i < n then
-          begin
-            if cmp2 true a0 av.(i) <> 0 then Sfalse
-            else loop (i + 1)
-          end
-        else
-          Strue
-      in
-        loop 1
+let snum_eq =
+  function
+    [] | _ :: [] -> Strue
+  | a0 :: al ->
+      if List.exists (fun a -> cmp2 true a0 a <> 0) al then
+        Sfalse
+      else
+        Strue
 ;;
 
-let snum_rel op av =
-  match Array.length av with
-    0 | 1 -> Strue
-  | n ->
-      let rec loop v i =
-        if i < n then
-          begin
-            if op (cmp2 false v av.(i)) 0 then loop av.(i) (i + 1)
+let snum_rel op =
+  function
+    [] | _ :: [] -> Strue
+  | a :: al ->
+      let rec loop a0 =
+        function
+          a1 :: al ->
+            if op (cmp2 false a0 a1) 0 then loop a1 al
             else Sfalse
-          end
-        else
-          Strue
+        | [] ->
+            Strue
       in
-        loop av.(0) 1
+        loop a al
 ;;
 
-let snum_minormax op av =
-  match Array.length av with
-    0 -> raise (Error "args required")
-  | 1 -> av.(0)
-  | n ->
+let snum_minormax op =
+  function
+    [] -> raise (Error "args required")
+  | a :: [] -> a
+  | a :: al ->
       let inex = ref false in
-      let r = do_ops (fun a b ->
+      let r = List.fold_left (fun a b ->
                         if is_inexact a = Strue || is_inexact b = Strue then
                           inex := true;
-                        if op (cmp2 false a b) 0 then a else b) av n
+                        if op (cmp2 false a b) 0 then a else b) a al
       in
         if !inex then to_inexact r else r
 ;;
@@ -356,8 +337,8 @@ let snum_acos = rcsw acos acos_cplx;;
 
 let snum_atan =
   function
-    [| x |] -> rcsw atan atan_cplx x
-  | [| y; x |] ->
+    [ x ] -> rcsw atan atan_cplx x
+  | [ y; x ] ->
     Sreal (Complex.arg { Complex.re = float_of_snum x;
                          Complex.im = float_of_snum y })
   | _ -> raise (Error "atan: bad args")
@@ -481,12 +462,10 @@ let rec gcd2 a b =
         raise (Error "gcd: non-integer arguments")
 ;;
 
-let snum_gcd av =
-  let n = Array.length av in
-    if n = 0 then
-      Sint 0
-    else
-      do_ops gcd2 av n
+let snum_gcd =
+  function
+    [] -> Sint 0
+  | a :: al -> List.fold_left gcd2 a al
 ;;
 
 let lcm2 a b =
@@ -494,12 +473,10 @@ let lcm2 a b =
     snum_abs (mul2 (div2 a g) b)
 ;;
 
-let snum_lcm av =
-  let n = Array.length av in
-    if n = 0 then
-      Sint 1
-    else
-      do_ops lcm2 av n
+let snum_lcm =
+  function
+    [] -> Sint 1
+  | a :: al -> List.fold_left lcm2 a al
 ;;
 
 (* The algorithm for calculating the simplest rational form of a number
