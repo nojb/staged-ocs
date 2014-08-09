@@ -98,9 +98,10 @@ let is_equal a b =
 
 let do_apply f av th cc =
   let n = Array.length av in
+  if n = 0 then raise (Error "apply: bad args");
   let rec loop i r =
-    if i = 0 then
-      av.(0) :: r
+    if i < 0 then
+      r
     else if i = n - 1 then  (* r must be [] *)
       loop (i - 1) (list_to_caml av.(i))
     else
