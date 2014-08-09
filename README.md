@@ -96,7 +96,7 @@ in the module `Ocs_types` are visible.
 Scheme values (S-expressions) are of the type `sval`.
 
 Before evaluation Scheme values are compiled to internal representations of the
-type code.  This is done by the function
+type `scode`.  This is done by the function
 
     Ocs_compile.compile : env -> sval -> scode
 
@@ -108,9 +108,9 @@ language bindings can be created using
 
 Staging is done by
 
-    Ocs_eval.stage : senv -> thread code -> (sval code -> unit code) -> scode -> unit code
+    Ocs_eval.stage : thread code -> (sval code -> unit code) -> scode -> unit code
 
-where the third argument is a continuation to pass the result to.
+where the second argument is a continuation to pass the result to.
 
 The `thread` type is used at run-time for storing the current input/output ports
 and the current dynamic extent.  It does not represent a thread in the
