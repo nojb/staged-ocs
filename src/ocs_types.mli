@@ -176,11 +176,6 @@ and env =
     mutable env_tagged : (env * sval * vbind) list
   }
 
-  (* Staging environment, used during staging.  *)
-and senv =
-  [ `I of sval code
-  | `M of sval ref code ] list
-
   (* Dynamic extents are associated with threads and continuations.  *)
 and dynext =
   {

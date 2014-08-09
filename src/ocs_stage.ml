@@ -5,6 +5,11 @@ open Ocs_error
 open Ocs_sym
 open Ocs_misc
 
+  (* Staging environment, used during staging.  *)
+type senv =
+  [ `I of sval code
+  | `M of sval ref code ] list
+
 (* Local variables are stored either in th_frame or th_display.
    th_frame is the deepest frame, not yet part of the display.  *)
 
@@ -393,3 +398,5 @@ let rec stage e th cc =
   | _ -> raise (Error "stage: internal error")
 ;;
 
+let stage th cc c =
+  stage [] th cc c

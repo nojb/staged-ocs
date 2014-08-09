@@ -174,7 +174,7 @@ let load_file e th name =
       Seof -> ()
     | v ->
         let c = compile e v in
-        let sc = stage [] .< th >. (fun x -> .< let _ = .~x in () >.) c in
+        let sc = stage .< th >. (fun x -> .< let _ = .~x in () >.) c in
           Runcode.run sc;
           loop ()
   in
@@ -191,7 +191,7 @@ let eval_prim expr e th cc =
   match e with
     Sesym (e, _) ->
       let c = compile e expr in
-      let sc = stage [] .< th >. (fun x -> .< cc .~x >.) c in
+      let sc = stage .< th >. (fun x -> .< cc .~x >.) c in
         Runcode.run sc
   | _ -> raise (Error "eval: invalid args")
 ;;
