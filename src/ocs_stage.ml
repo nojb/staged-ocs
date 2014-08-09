@@ -30,7 +30,6 @@ let setl e i v =
 let rec proc_has_rest : type a. a sg -> bool = function
     Pfix sg -> proc_has_rest sg
   | Prest _ -> true
-  | Prests _ -> true
   | Pcont -> false
   | Pret -> false
   | Pvoid sg -> proc_has_rest sg
@@ -40,7 +39,6 @@ let rec proc_has_rest : type a. a sg -> bool = function
 let rec proc_nargs : type a. a sg -> int = function
     Pfix sg -> 1 + proc_nargs sg
   | Prest _ -> 1
-  | Prests _ -> 1
   | Pcont -> 0
   | Pret -> 0
   | Pvoid sg -> proc_nargs sg
@@ -67,12 +65,6 @@ let rec doapply th (cc : sval -> unit) p av =
             cc f
         | Pcont, [] ->
             f cc
-        | Prests sg, _ ->
-            let rec mkrest = function
-                [] -> Snull
-              | a :: al -> Spair { car = a; cdr = mkrest al }
-            in
-              loop sg (f (mkrest al)) []
         | Prest sg, _ ->
             loop sg (f al) []
         | Pvoid sg, _ ->
@@ -178,16 +170,6 @@ let rec stage e th cc =
               cc f
           | Pcont, [] ->
               .< .~f (fun x -> .~(cc .< x >.)) >.
-          | Prests sg, _ ->
-              let rec mkrest cc = function
-                  [] -> cc .< Snull >.
-                | a :: al ->
-                    stage e th
-                      (fun a ->
-                         mkrest
-                           (fun al -> cc .< Spair { car = .~a; cdr = .~al } >.) al) a
-              in
-                mkrest (fun al -> loop sg .< .~f .~al >. []) al
           | Prest sg, _ ->
               let rec mkrest cc = function
                   [] -> cc .< [] >.
@@ -256,7 +238,7 @@ let rec stage e th cc =
   | Clambda l ->
       let rec loop cc = function
           [] -> cc.cc (Pthread Pcont)
-        | [_] when l.lam_has_rest -> cc.cc (Prests (Pthread Pcont))
+        | [_] when l.lam_has_rest -> cc.cc (Prest (Pthread Pcont))
         | _ :: rest -> loop { cc = fun sg -> cc.cc (Pfix sg) } rest
       in
       let rec mkargs : type a. _ -> _ -> a sg -> a code = fun e largs sg ->
@@ -268,14 +250,15 @@ let rec stage e th cc =
               .< fun x -> .~(mkargs (`I .<x>. :: e) largs sg) >.
         | [], Pthread Pcont ->
             .< fun th cc -> .~(stage e .< th >. (fun x -> .< cc .~x >.) l.lam_body) >.
-        | [a], Prests (Pthread Pcont) ->
+        | [a], Prest (Pthread Pcont) ->
             if Ocs_env.is_mutable a then
               .< fun x th cc ->
-                 let x = ref x in
+                 let x = ref (list_of_caml x) in
                    .~(stage (`M .<x>. :: e) .< th >. (fun x -> .< cc .~x >.) l.lam_body) >.
             else
               .< fun x th cc ->
-                 .~(stage (`I .<x>. :: e) .< th >. (fun x -> .< cc .~x >.) l.lam_body) >.
+                 let x = list_of_caml x in
+                   .~(stage (`I .<x>. :: e) .< th >. (fun x -> .< cc .~x >.) l.lam_body) >.
         | _ ->
             assert false
       in

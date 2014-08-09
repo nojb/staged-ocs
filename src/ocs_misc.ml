@@ -13,6 +13,16 @@ let list_to_caml l =
     loop [] l
 ;;
 
+let list_of_caml l =
+  let rec loop r =
+    function
+      [] -> r
+    | a :: al ->
+        loop (Spair { car = a; cdr = r }) al
+  in
+    loop Snull (List.rev l)
+;;
+
 (* Create a Scheme list from a reversed native list.  *)
 let make_slist tl l =
   let rec loop r =
