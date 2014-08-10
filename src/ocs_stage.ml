@@ -10,6 +10,12 @@ type senv =
   [ `I of sval code
   | `M of sval ref code ] list
 
+let bind e (v : vbind) (a : sval code) (cc : senv -> _ code) =
+  if Ocs_env.is_mutable v then
+    .< let x = ref .~a in .~(cc (`M .< x >. :: e)) >.
+  else
+    .< let x = .~a in .~(cc (`I .< x >. :: e)) >.
+
 (* Local variables are stored either in th_frame or th_display.
    th_frame is the deepest frame, not yet part of the display.  *)
 
@@ -30,21 +36,18 @@ let setl e i v =
 let rec proc_has_rest : type a. a sg -> bool = function
     Pfix sg -> proc_has_rest sg
   | Prest _ -> true
-  | Pcont -> false
-  | Pret -> false
-  | Pvoid sg -> proc_has_rest sg
+  | Pret _ -> false
+  | Pvoid _ -> false
 ;;
 
 let rec proc_nargs : type a. a sg -> int = function
     Pfix sg -> 1 + proc_nargs sg
+  | Pret _ -> 0
   | Prest _ -> 1
-  | Pcont -> 0
-  | Pret -> 0
-  | Pvoid sg -> proc_nargs sg
+  | Pvoid _ -> 0
 ;;
 
 let args_err sg proc_name n =
-  let proc_name = match proc_name with None -> "#<unknown>" | Some s -> s in
   if proc_has_rest sg then
     Printf.sprintf "procedure %s expected %d or more args got %d"
       proc_name (proc_nargs sg - 1) n
@@ -54,30 +57,39 @@ let args_err sg proc_name n =
 
 let rec doapply th (cc : sval -> unit) p av =
   match p with
-    Sproc p ->
+    Sprim p
+  | Sproc p ->
       let Pf (sg, f) = p.proc_fun in 
+      let ret : type a. a ret -> a -> unit = fun r f ->
+        match r with
+          Rval ->
+            cc f
+        | Rcont ->
+            f th cc
+      in
       let rec loop : type a. a sg -> a -> _ -> unit = fun sg f al ->
         match sg, al with
           Pfix sg, a :: al ->
             loop sg (f a) al
-        | Pret, [] ->
-            cc f
-        | Pcont, [] ->
-            f th cc
-        | Prest sg, _ ->
-            loop sg (f al) []
-        | Pvoid sg, _ ->
-            loop sg (f ()) al
-        | Pcont, _ :: _ ->
-            raise (Error (args_err sg p.proc_name (List.length av)))
-        | Pret, _ :: _ ->
-            raise (Error (args_err sg p.proc_name (List.length av)))
-        | Pfix _, [] ->
+        | Prest r, _ ->
+            ret r (f al)
+        | Pret r, [] ->
+            ret r f
+        | Pvoid r, [] ->
+            ret r (f ())
+        | _ ->
             raise (Error (args_err sg p.proc_name (List.length av)))
       in
         loop sg f av
   | _ ->
       raise (Error "apply: not a procedure or primitive")
+
+  (* This is necessary to pass a function ('a. 'a sg -> 'b) as an argument, see
+     the case of [Clambda] in [Ocs_stage.stage] *)
+type 'b slambda_c =
+  {
+    cc : 'a. 'a sg -> 'b
+  }
 
 let rec stage e th cc =
   function
@@ -156,31 +168,34 @@ let rec stage e th cc =
            else
              .~(cc .< g.g_val >.) >.
   | Cgetl i -> cc (getl e i)
-  | Capply (Cval (Sproc p), av) ->
+  | Capply (Cval (Sprim p), av) ->
       begin
-        let Pf (sg, f) = p.proc_fun in 
+        let Pf (sg, f) = p.proc_fun in
+        let ret : type a. a ret -> a code -> unit code = fun r f ->
+          match r with
+            Rval ->
+              cc f
+          | Rcont ->
+              .< .~f .~th (fun x -> .~(cc .< x >.)) >.
+        in
         let rec loop : type a. a sg -> a code -> _ -> unit code = fun sg f al ->
           match sg, al with
             Pfix sg, a :: al ->
               stage e th (fun a -> loop sg .< .~f .~a >. al) a
-          | Pret, [] ->
-              cc f
-          | Pcont, [] ->
-              .< .~f .~th (fun x -> .~(cc .< x >.)) >.
-          | Prest sg, _ ->
+          | Prest r, _ ->
               let rec mkrest cc = function
                   [] -> cc .< [] >.
                 | a :: al ->
-                    stage e th (fun a -> mkrest (fun al -> cc .< .~a :: .~al >.) al) a
+                    stage e th
+                      (fun a ->
+                        mkrest (fun al -> cc .< .~a :: .~al >.) al) a
               in
-                mkrest (fun al -> loop sg .< .~f .~al >. []) al
-          | Pvoid sg, _ ->
-              loop sg .< .~f () >. al
-          | Pcont, _ :: _ ->
-              raise (Error (args_err sg p.proc_name (List.length av)))
-          | Pret, _ :: _ ->
-              raise (Error (args_err sg p.proc_name (List.length av)))
-          | Pfix _, [] ->
+                mkrest (fun al -> ret r .< .~f .~al >.) al
+          | Pret r, [] ->
+              ret r f
+          | Pvoid r, [] ->
+              ret r .< .~f () >.
+          | _ ->
               raise (Error (args_err sg p.proc_name (List.length av)))
         in
           loop sg .< f >. av
@@ -200,16 +215,9 @@ let rec stage e th cc =
                        mkrest (fun vals -> cc .< Spair { car = .~v; cdr = .~vals } >.) vals)
                     v
             in
-              mkrest (fun rest ->
-                  if Ocs_env.is_mutable a then
-                    .< let x = ref .~rest in .~(loop (`M .< x >. :: e) [] []) >.
-                  else
-                    .< let x = .~rest in .~(loop (`I .< x >. :: e) [] []) >.) vals
+              mkrest (fun rest -> bind e a rest (fun e -> loop e [] [])) vals
         | a :: args, v :: vals ->
-            if Ocs_env.is_mutable a then
-              stage e0 th (fun v -> .< let x = ref .~v in .~(loop (`M .< x >. :: e) args vals) >.) v
-            else
-              stage e0 th (fun v -> .< let x = .~v in .~(loop (`I .< x >. :: e) args vals) >.) v
+            stage e0 th (fun v -> bind e a v (fun e -> loop e args vals)) v
         | _ ->
             raise (Error "apply: wrong number of arguments")
       in
@@ -230,35 +238,30 @@ let rec stage e th cc =
                      (fun al -> .< doapply .~th (fun x -> .~(cc .<x>.)) f .~al >.)
                      a
                end >.) c
-  | Clambda l ->
-      let rec loop cc = function
-          [] -> cc.cc Pcont
-        | [_] when l.lam_has_rest -> cc.cc (Prest Pcont)
-        | _ :: rest -> loop { cc = fun sg -> cc.cc (Pfix sg) } rest
+  | Clambda { lam_has_rest = hr; lam_body = body; lam_args = args; lam_name = n } ->
+      let rec scanargs cc = function
+          [] -> cc.cc (Pret Rcont)
+        | _ :: [] when hr -> cc.cc (Prest Rcont)
+        | _ :: rest -> scanargs { cc = fun sg -> cc.cc (Pfix sg) } rest
       in
       let rec mkargs : type a. _ -> _ -> a sg -> a code = fun e largs sg ->
         match largs, sg with
           b :: largs, Pfix sg ->
-            if Ocs_env.is_mutable b then
-              .< fun x -> let x = ref x in .~(mkargs (`M .<x>. :: e) largs sg) >.
-            else
-              .< fun x -> .~(mkargs (`I .<x>. :: e) largs sg) >.
-        | [], Pcont ->
-            .< fun th cc -> .~(stage e .< th >. (fun x -> .< cc .~x >.) l.lam_body) >.
-        | [a], Prest Pcont ->
-            if Ocs_env.is_mutable a then
-              .< fun x th cc ->
-                 let x = ref (list_of_caml x) in
-                   .~(stage (`M .<x>. :: e) .< th >. (fun x -> .< cc .~x >.) l.lam_body) >.
-            else
-              .< fun x th cc ->
-                 let x = list_of_caml x in
-                   .~(stage (`I .<x>. :: e) .< th >. (fun x -> .< cc .~x >.) l.lam_body) >.
+            .< fun x ->
+               .~(bind e b .< x >. (fun e -> mkargs e largs sg)) >.
+        | [], Pret Rcont ->
+            .< fun th cc ->
+               .~(stage e .< th >. (fun x -> .< cc .~x >.) body) >.
+        | a :: [], Prest Rcont ->
+            .< fun x th cc ->
+               .~(bind e a .< list_of_caml x >.
+                    (fun e -> stage e .< th >. (fun x -> .< cc .~x >.) body)) >.
         | _ ->
             assert false
       in
-      let pf = loop { cc = fun sg -> .< Pf (sg, .~(mkargs e l.lam_args sg)) >. } l.lam_args in
-        cc .< Sproc { proc_name = l.lam_name; proc_is_prim = false; proc_fun = .~pf } >.
+      let pf = scanargs { cc = fun sg -> .< Pf (sg, .~(mkargs e args sg)) >. } args in
+      let proc_name = match n with None -> "#<unknown>" | Some n -> n in
+        cc .< Sproc { proc_name; proc_fun = .~pf } >.
   | Cqqp (h, t) ->
       begin
         match h with

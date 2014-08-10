@@ -139,13 +139,12 @@ let is_syntax e sym sf =
 ;;
 
 let set_pfg e sg f n =
-  set_glob e (get_symbol n) (Sproc { proc_name = Some n; proc_is_prim = true; proc_fun = Pf (sg, f) })
+  set_glob e (get_symbol n) (Sprim { proc_name = n; proc_fun = Pf (sg, f) })
 ;;
 
-let set_pf0 e f n = set_pfg e (Pvoid Pret) f n
-let set_pf1 e f n = set_pfg e (Pfix Pret) f n
-let set_pf2 e f n = set_pfg e (Pfix (Pfix Pret)) f n
-let set_pf3 e f n = set_pfg e (Pfix (Pfix (Pfix Pret))) f n
-let set_pfn e f n = set_pfg e (Prest Pret) f n
-let set_pfcn e f n = set_pfg e (Prest Pcont) (fun a th cc -> f th cc a) n
-
+let set_pf0 e f n = set_pfg e (Pvoid Rval) f n
+let set_pf1 e f n = set_pfg e (Pfix (Pret Rval)) f n
+let set_pf2 e f n = set_pfg e (Pfix (Pfix (Pret Rval))) f n
+let set_pf3 e f n = set_pfg e (Pfix (Pfix (Pfix (Pret Rval)))) f n
+let set_pfn e f n = set_pfg e (Prest Rval) f n
+let set_pfcn e f n = set_pfg e (Prest Rcont) (fun a th cc -> f th cc a) n

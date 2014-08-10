@@ -202,9 +202,9 @@ let init e =
   set_pf1 e scm_close_port "close-input-port";
   set_pf1 e scm_close_port "close-output-port";
 
-  set_pfg e (Pfix (Pfix Pcont)) call_w_in "call-with-input-file";
-  set_pfg e (Pfix (Pfix Pcont)) call_w_out "call-with-output-file";
+  set_pfg e (Pfix (Pfix (Pret Rcont))) call_w_in "call-with-input-file";
+  set_pfg e (Pfix (Pfix (Pret Rcont))) call_w_out "call-with-output-file";
 
-  set_pfg e (Pfix (Pfix Pcont)) w_in "with-input-from-file";
-  set_pfg e (Pfix (Pfix Pcont)) w_out "with-output-to-file";
+  set_pfg e (Pfix (Pfix (Pret Rcont))) w_in "with-input-from-file";
+  set_pfg e (Pfix (Pfix (Pret Rcont))) w_out "with-output-to-file";
 ;;

@@ -48,7 +48,7 @@ let genref =
     Vglob g ->
       begin
         match g.g_val with
-          Sproc { proc_is_prim = true } -> Cval g.g_val
+          Sprim _ -> Cval g.g_val
         | _ -> Cgetg g
       end
   | Vloc l -> Cgetl l.l_pos
@@ -111,21 +111,6 @@ let rec mkdefine e =
       gendef (get_var e s) (Cval Sunspec)
   | _ ->
       raise (Error "define: invalid syntax")
-  (*     args = *)
-  (* let narg = Array.length args in *)
-  (*   if narg < 1 then *)
-  (*     raise (Error "define: not enough args"); *)
-  (*   match args.(0) with *)
-  (*     Spair { car = (Ssymbol _ | Sesym (_, _)) as s; cdr = al } when narg > 1 -> *)
-  (*       begin *)
-  (*         let l = mklambda ~proc_name:(sym_name s) e al args in *)
-  (*           gendef (get_var e s) l *)
-  (*       end *)
-  (*   | (Ssymbol _ | Sesym (_, _)) as s when narg = 2 -> *)
-  (*       gendef (get_var e s) (compile e args.(1)) *)
-  (*   | (Ssymbol _ | Sesym (_, _)) as s when narg = 1 -> *)
-  (*       gendef (get_var e s) (Cval Sunspec) *)
-  (*   | _ -> raise (Error "define: invalid syntax") *)
 
 (* The following functions up to mkbody are used to compile the body
    of a lambda, let etc., with possible internal definitions.  The

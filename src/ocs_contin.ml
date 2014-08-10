@@ -58,9 +58,8 @@ let call_cc proc th cc =
         [ x ] -> cc x
       | _ -> cc (Svalues al)
     in
-    Sproc { proc_name = Some "<continuation>";
-            proc_is_prim = false;
-            proc_fun = Pf (Prest Pcont, continuation) }
+      Sproc { proc_name = "<continuation>";
+              proc_fun = Pf (Prest Rcont, continuation) }
   in
     doapply th cc proc [ cont ]
 ;;
@@ -103,12 +102,12 @@ let call_values producer consumer th cc =
 (* ;; *)
 
 let init e =
-  set_pfg e (Pfix Pcont) call_cc "call-with-current-continuation";
-  set_pfg e (Pfix Pcont) call_cc "call/cc";
+  set_pfg e (Pfix (Pret Rcont)) call_cc "call-with-current-continuation";
+  set_pfg e (Pfix (Pret Rcont)) call_cc "call/cc";
 
   set_pfn e values "values";
 
-  set_pfg e (Pfix (Pfix Pcont)) call_values "call-with-values";
+  set_pfg e (Pfix (Pfix (Pret Rcont))) call_values "call-with-values";
   (* set_pfcn e dynamic_wind "dynamic-wind"; *)
 ;;
 

@@ -46,6 +46,9 @@ type sval =
   (* Port object.  *)
   | Sport of Ocs_port.port
 
+  (* A primitive.  *)
+  | Sprim of sproc
+
   (* A closure created by combining the process reference with the
      local environment at that point of execution.  *)
   | Sproc of sproc
@@ -76,23 +79,24 @@ and spair =
     mutable cdr : sval
   }
 
-  (* Procedure signature.  *)
+and _ ret =
+    Rval : sval ret
+  | Rcont : (thread -> (sval -> unit) -> unit) ret
+
+  (* Primitive signature.  *)
 and _ sg =
-    Pfix : 'a sg -> (sval -> 'a) sg
-  | Prest : 'a sg -> (sval list -> 'a) sg
-  | Pcont : (thread -> (sval -> unit) -> unit) sg
-  | Pret : sval sg
-  | Pvoid : 'a sg -> (unit -> 'a) sg
+    Pfix : 'b sg -> (sval -> 'b) sg
+  | Prest : 'b ret -> (sval list -> 'b) sg
+  | Pret : 'a ret -> 'a sg
+  | Pvoid : 'a ret -> (unit -> 'a) sg
 
   (* Procedure structure.  *)
 and sproc =
   {
-    proc_name : string option;
-    proc_is_prim : bool;
+    proc_name : string;
     proc_fun : procf
   }
 
-  (* Procedure signature and implementation. *)
 and procf =
     Pf : 'a sg * 'a -> procf
 
@@ -126,13 +130,6 @@ and slambda =
     lam_args : vbind list;
     lam_has_rest : bool;
     lam_name : string option
-  }
-
-  (* This is necessary to pass a function ('a. 'a sg -> 'b) as an argument, see
-     the case of [Clambda] in [Ocs_stage.stage] *)
-and 'b slambda_c =
-  {
-    cc : 'a. 'a sg -> 'b
   }
 
   (* Global variable slot.  *)
