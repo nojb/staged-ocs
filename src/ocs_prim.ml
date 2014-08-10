@@ -106,7 +106,7 @@ let do_apply f av th cc =
     doapply th cc f args
 ;;
 
-let force p cc =
+let force p _ cc =
   match p with
     Spromise p ->
       p cc
@@ -230,15 +230,15 @@ let init e =
   set_pf2 e is_eqv "eqv?";
   set_pf2 e is_equal "equal?";
 
-  set_pfg e (Pfix (Prest (Pthread Pcont))) do_apply "apply";
+  set_pfg e (Pfix (Prest Pcont)) do_apply "apply";
 
   set_pfg e (Pfix Pcont) force "force";
 
-  set_pfg e (Prest (Pthread Pcont)) map "map";
-  set_pfg e (Prest (Pthread Pcont)) for_each "for-each";
+  set_pfg e (Prest Pcont) map "map";
+  set_pfg e (Prest Pcont) for_each "for-each";
 
-  set_pfg e (Pfix (Pthread Pcont)) (load_prim e) "load";
-  set_pfg e (Pfix (Pfix (Pthread Pcont))) eval_prim "eval";
+  set_pfg e (Pfix Pcont) (load_prim e) "load";
+  set_pfg e (Pfix (Pfix Pcont)) eval_prim "eval";
 
   set_pf1 e (report_env (env_copy e)) "scheme-report-environment";
   set_pf1 e null_env "null-environment";

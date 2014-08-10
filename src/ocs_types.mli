@@ -80,10 +80,9 @@ and spair =
 and _ sg =
     Pfix : 'a sg -> (sval -> 'a) sg
   | Prest : 'a sg -> (sval list -> 'a) sg
-  | Pcont : ((sval -> unit) -> unit) sg
+  | Pcont : (thread -> (sval -> unit) -> unit) sg
   | Pret : sval sg
   | Pvoid : 'a sg -> (unit -> 'a) sg
-  | Pthread : 'a sg -> (thread -> 'a) sg
 
   (* Procedure structure.  *)
 and sproc =

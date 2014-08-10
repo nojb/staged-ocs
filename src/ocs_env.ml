@@ -147,5 +147,5 @@ let set_pf1 e f n = set_pfg e (Pfix Pret) f n
 let set_pf2 e f n = set_pfg e (Pfix (Pfix Pret)) f n
 let set_pf3 e f n = set_pfg e (Pfix (Pfix (Pfix Pret))) f n
 let set_pfn e f n = set_pfg e (Prest Pret) f n
-let set_pfcn e f n = set_pfg e (Prest (Pthread Pcont)) (fun a th cc -> f th cc a) n
+let set_pfcn e f n = set_pfg e (Prest Pcont) (fun a th cc -> f th cc a) n
 
