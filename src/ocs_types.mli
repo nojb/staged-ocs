@@ -87,7 +87,7 @@ and _ sg =
   (* Procedure structure.  *)
 and sproc =
   {
-    proc_name : string;
+    proc_name : string option;
     proc_is_prim : bool;
     proc_fun : procf
   }
@@ -125,7 +125,7 @@ and slambda =
     lam_body : scode;
     lam_args : vbind list;
     lam_has_rest : bool;
-    lam_name : string
+    lam_name : string option
   }
 
   (* This is necessary to pass a function ('a. 'a sg -> 'b) as an argument, see

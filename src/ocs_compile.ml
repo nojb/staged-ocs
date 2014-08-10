@@ -57,7 +57,7 @@ let genref =
   | Vkeyword _ -> Cval Sunbound
 ;;
 
-let make_lambda ?(proc_name = "#<unknown>") c n hr =
+let make_lambda ?proc_name c n hr =
   { lam_body = c;
     lam_args = n;
     lam_has_rest = hr;

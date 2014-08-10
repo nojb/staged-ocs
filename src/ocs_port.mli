@@ -24,7 +24,8 @@ val char_ready : port -> bool
 
 val putc : port -> char -> unit
 val puts : port -> string -> unit
-
+val putf : port -> ('b, unit, string, unit) format4 -> 'b
+    
 val get_fd : port -> Unix.file_descr option
 
 val flush : port -> unit

@@ -44,6 +44,7 @@ let rec proc_nargs : type a. a sg -> int = function
 ;;
 
 let args_err sg proc_name n =
+  let proc_name = match proc_name with None -> "#<unknown>" | Some s -> s in
   if proc_has_rest sg then
     Printf.sprintf "procedure %s expected %d or more args got %d"
       proc_name (proc_nargs sg - 1) n

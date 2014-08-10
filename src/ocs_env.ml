@@ -139,7 +139,7 @@ let is_syntax e sym sf =
 ;;
 
 let set_pfg e sg f n =
-  set_glob e (get_symbol n) (Sproc { proc_name = n; proc_is_prim = true; proc_fun = Pf (sg, f) })
+  set_glob e (get_symbol n) (Sproc { proc_name = Some n; proc_is_prim = true; proc_fun = Pf (sg, f) })
 ;;
 
 let set_pf0 e f n = set_pfg e (Pvoid Pret) f n

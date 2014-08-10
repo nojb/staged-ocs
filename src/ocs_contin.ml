@@ -58,7 +58,7 @@ let call_cc proc th cc =
         [ x ] -> cc x
       | _ -> cc (Svalues al)
     in
-    Sproc { proc_name = "<continuation>";
+    Sproc { proc_name = Some "<continuation>";
             proc_is_prim = false;
             proc_fun = Pf (Prest Pcont, continuation) }
   in

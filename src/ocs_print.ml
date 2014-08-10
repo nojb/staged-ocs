@@ -63,9 +63,10 @@ and print p disp =
   | Spair l -> write_list p disp l
   | Svector v -> write_vector p disp v
   | Sport _ -> Ocs_port.puts p "#<port>"
-  | Sproc { proc_is_prim = false } -> Ocs_port.puts p "#<procedure>"
-  | Sproc { proc_name = n; proc_is_prim = true } ->
-      Ocs_port.puts p "#<primitive:"; Ocs_port.puts p n; Ocs_port.putc p '>'
+  | Sproc { proc_name = None; proc_is_prim = isp } ->
+      Ocs_port.putf p "#<%s>" (if isp then "primitive" else "procedure")
+  | Sproc { proc_name = Some n; proc_is_prim = isp } ->
+      Ocs_port.putf p "#<%s:%s>" (if isp then "primitive" else "procedure") n
   | Spromise _ -> Ocs_port.puts p "#<promise>"
   | Sesym (_, s) -> print p disp s
   | Swrapped _ -> Ocs_port.puts p "#<wrapped>"

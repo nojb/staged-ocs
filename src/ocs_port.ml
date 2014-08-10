@@ -170,6 +170,10 @@ let puts p s =
       String.iter (fun c -> putc p c) s
 ;;
 
+let putf p fmt =
+  Printf.ksprintf (fun s -> puts p s) fmt
+;;
+
 let fd_port fd flags =
   let inf = ref false
   and outf = ref false
