@@ -85,7 +85,7 @@ and spair =
 and sparam =
   {
     p_dynvar : sval Dynvar.dynvar;
-    p_init : sval;
+    mutable p_init : sval;
     p_conv : sval -> sval
   }
 

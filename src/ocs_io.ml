@@ -3,7 +3,7 @@
 open Ocs_types
 open Ocs_error
 open Ocs_env
-open Ocs_stage
+open Ocs_prim
 open Ocs_print
 
 let get_stdin th =
@@ -157,28 +157,28 @@ let scm_close_port p =
 
 let call_w_in name proc th =
   let p = open_input_file name in
-  let x = doapply th proc [p] in
+  let x = apply th proc [p] in
     close_port p;
     x
 ;;
 
 let call_w_out name proc th =
   let p = open_output_file name in
-  let x = doapply th proc [p] in
+  let x = apply th proc [p] in
     close_port p;
     x
 ;;
 
 let w_in name thunk th =
   let p = open_input_file name in
-  let x = doapply { th with th_stdin = p } thunk [] in
+  let x = apply { th with th_stdin = p } thunk [] in
     close_port p;
     x
 ;;
 
 let w_out name thunk th =
   let p = open_output_file name in
-  let x = doapply { th with th_stdout = p } thunk [] in
+  let x = apply { th with th_stdout = p } thunk [] in
     close_port p;
     x
 ;;

@@ -4,7 +4,10 @@ open Ocs_types
 open Ocs_error
 open Ocs_sym
 open Ocs_misc
-
+open Ocs_prim
+open Ocs_compile
+open Ocs_env
+  
   (* Staging environment, used during staging.  *)
 type senv =
   [ `I of sval code
@@ -32,64 +35,6 @@ let setl e i v =
       `I _ -> raise (Error "setl: internal error")
     | `M c -> .< .~c := .~v >.
 ;;
-
-let rec proc_has_rest : type a. a sg -> bool = function
-    Pfix sg -> proc_has_rest sg
-  | Prest _ -> true
-  | Pret _ -> false
-  | Pvoid _ -> false
-;;
-
-let rec proc_nargs : type a. a sg -> int = function
-    Pfix sg -> 1 + proc_nargs sg
-  | Pret _ -> 0
-  | Prest _ -> 1
-  | Pvoid _ -> 0
-;;
-
-let args_err sg proc_name n =
-  if proc_has_rest sg then
-    Printf.sprintf "procedure %s expected %d or more args got %d"
-      proc_name (proc_nargs sg - 1) n
-  else
-    Printf.sprintf "procedure %s expected %d args got %d"
-      proc_name (proc_nargs sg) n
-
-let rec doapply th p av =
-  match p with
-    Sprim p
-  | Sproc p ->
-      let Pf (sg, f) = p.proc_fun in 
-      let ret : type a. a ret -> a -> sval = fun r f ->
-        match r with
-          Rval ->
-            f
-        | Rcont ->
-            f th
-      in
-      let rec loop : type a. a sg -> a -> _ -> sval = fun sg f al ->
-        match sg, al with
-          Pfix sg, a :: al ->
-            loop sg (f a) al
-        | Prest r, _ ->
-            ret r (f al)
-        | Pret r, [] ->
-            ret r f
-        | Pvoid r, [] ->
-            ret r (f ())
-        | _ ->
-            raise (Error (args_err sg p.proc_name (List.length av)))
-      in
-        loop sg f av
-  | Sparam p ->
-      begin
-        try
-          Dynvar.dref p.p_dynvar
-        with
-          _ -> p.p_conv p.p_init
-      end
-  | _ ->
-      raise (Error "apply: not a procedure or primitive")
 
   (* This is necessary to pass a function ('a. 'a sg -> 'b) as an argument, see
      the case of [Clambda] in [Ocs_stage.stage] *)
@@ -216,7 +161,7 @@ let rec stage e th =
                    loop (fun al -> cc .< .~(stage e th a) :: .~al >.) al
              in
                loop
-                 (fun al -> .< doapply .~th f .~al >.)
+                 (fun al -> .< apply .~th f .~al >.)
                  a
            end >.
   | Clambda { lam_has_rest = hr; lam_body = body; lam_args = args; lam_name = n } ->
@@ -300,7 +245,7 @@ let rec stage e th =
                  Sfalse ->
                    .~(loop al)
                | _ as v ->
-                   doapply .~th .~(stage e th b) [ v ] >.
+                   apply .~th .~(stage e th b) [ v ] >.
         | (c, b) :: al ->
             .< match .~(stage e th c) with
                  Sfalse ->
@@ -344,9 +289,8 @@ let rec stage e th =
             stage e th c
         | (p, v) :: ps ->
             .< match .~(stage e th p) with
-                 Sparam p ->
-                   Dynvar.dlet p.p_dynvar (p.p_conv .~(stage e th v))
-                     (fun () -> .~(loop ps))
+                 Sparam _ as p ->
+                   param_let p .~(stage e th v) (fun () -> .~(loop ps))
                | _ ->
                    raise (Error "parametrize: bad args") >.
       in
@@ -357,3 +301,39 @@ let rec stage e th =
 
 let stage th c =
   stage [] th c
+;;
+
+let load_file e th name =
+  let inp = Ocs_port.open_input_port name in
+  let lex = Ocs_lex.make_lexer inp name in
+  let rec loop () =
+    match Ocs_read.read_expr lex with
+      Seof -> ()
+    | v ->
+        let c = compile e v in
+        let sc = stage .< th >. c in
+        let _ = Delimcc.push_prompt Ocs_contin.main_prompt (fun () -> Runcode.run sc) in
+          loop ()
+  in
+    loop ()
+;;
+
+let load_prim e a th =
+  match a with
+    Sstring name -> load_file e th name; Sunspec
+  | _ -> raise (Error "load: invalid name argument")
+;;
+
+let eval_prim expr e th =
+  match e with
+    Sesym (e, _) ->
+      let c = compile e expr in
+      let sc = stage .< th >. c in
+        Runcode.run sc
+  | _ -> raise (Error "eval: invalid args")
+;;
+
+let init e =
+  set_pfg e (Pfix (Pret Rcont)) (load_prim e) "load";
+  set_pfg e (Pfix (Pfix (Pret Rcont))) eval_prim "eval";
+;;
