@@ -73,6 +73,7 @@ and print p disp =
   | Sesym (_, s) -> print p disp s
   | Swrapped _ -> Ocs_port.puts p "#<wrapped>"
   | Sunspec -> Ocs_port.puts p "#<unspecified>"
+  | Sparam _ -> Ocs_port.puts p "#<parameter>"
   | _ -> Ocs_port.puts p "#<unknown>"
 ;;
 

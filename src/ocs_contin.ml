@@ -2,7 +2,7 @@
 
 open Ocs_types
 open Ocs_error
-open Ocs_stage
+open Ocs_prim
 open Ocs_env
 open Ocs_misc
 
@@ -73,7 +73,7 @@ let call_cc proc th =
               proc_fun = Pf (Prest Rcont, continuation) }
   in
     Delimcc.control main_prompt
-      (fun cc -> cc (doapply th proc [ cont cc ]))
+      (fun cc -> cc (apply th proc [ cont cc ]))
 ;;
 
 let values =
@@ -83,11 +83,11 @@ let values =
 ;;
 
 let call_values producer consumer th =
-  match doapply th producer [] with
+  match apply th producer [] with
     Svalues av ->
-      doapply th consumer av
+      apply th consumer av
   | x ->
-      doapply th consumer [x]
+      apply th consumer [x]
 ;;
 
 (* let dynamic_wind th cc = *)

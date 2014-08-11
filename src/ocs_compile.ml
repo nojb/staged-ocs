@@ -424,6 +424,19 @@ and mkqq e =
       in
         qq 0 a0
 
+and mkparametrize e =
+  function
+    params :: body ->
+      let params =
+        List.map
+          (function
+              Spair { car = p; cdr = Spair { car = v; cdr = Snull } } -> (compile e p, compile e v)
+            | _ -> raise (Error "parametrize: bad syntax")) (list_to_caml params)
+      in
+        Cparam (params, Cseq (mkbody e body))
+  | _ ->
+      raise (Error "parametrize: bad syntax")
+  
 and applysym e s args =
   match get_var e s with
     Vsyntax f -> f e args
@@ -476,7 +489,8 @@ let bind_lang e =
              Cval (scanquoted a0)
          | _ ->
              raise (Error "quote: need exactly one arg"));
-      sym_quasiquote, mkqq ]
+      sym_quasiquote, mkqq;
+      sym_parametrize, mkparametrize ]
   in
     List.iter (fun (s, f) -> bind_name e s (Vsyntax f)) spec;
     bind_name e sym_else (Vkeyword "else");

@@ -72,11 +72,21 @@ type sval =
   (* An unspecified value.  *)
   | Sunspec
 
+  (* A dynamic parameter.  *)
+  | Sparam of sparam
+
   (* The actual type of a pair (cons cell).  *)
 and spair =
   {
     mutable car : sval;
     mutable cdr : sval
+  }
+
+and sparam =
+  {
+    p_dynvar : sval Dynvar.dynvar;
+    mutable p_init : sval;
+    p_conv : sval -> sval
   }
 
 and _ ret =
@@ -123,6 +133,7 @@ and scode =
   | Ccondspec of scode
   | Ccase of scode * (sval list * scode) list
   | Cdelay of scode
+  | Cparam of (scode * scode) list * scode
 
 and slambda =
   {
@@ -141,11 +152,7 @@ and gvar =
 
   (* Thread state, used during evaluation.  *)
 and thread =
-  {
-    th_stdin : sval;			(* Default input port.  *)
-    th_stdout : sval;			(* Default output port.  *)
-    th_dynext : dynext option		(* Current dynamic extent.  *)
-  }
+  dynext option             (* Current dynamic extent.  *)
 
   (* Local variable slot. *)
 and vloc =

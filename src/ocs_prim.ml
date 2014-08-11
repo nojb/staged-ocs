@@ -3,10 +3,8 @@
 open Ocs_types
 open Ocs_error
 open Ocs_env
-open Ocs_stage
 open Ocs_misc
 open Ocs_sym
-open Ocs_io
 open Ocs_compile
 open Ocs_macro
 
@@ -96,6 +94,111 @@ let is_equal a b =
   if test_equal a b then Strue else Sfalse
 ;;
 
+let new_param i c =
+  Sparam
+    {
+      p_dynvar = Dynvar.dnew ();
+      p_init = i;
+      p_conv = c
+    }
+;;
+
+let get_param p =
+  match p with
+    Sparam p ->
+      begin
+        try
+          Dynvar.dref p.p_dynvar
+        with
+          _ -> p.p_conv p.p_init
+      end
+  | _ ->
+      raise (Error "param_get: not a parameter")
+;;
+
+let set_param p x =
+  match p with
+    Sparam p ->
+      begin
+        try
+          let _ = Dynvar.dset p.p_dynvar x in
+            ()
+        with
+          _ -> p.p_init <- p.p_conv x
+      end
+  | _ ->
+      raise (Error "param_set: not a parameter")
+;;
+
+let let_param p x f =
+  match p with
+    Sparam p ->
+      Dynvar.dlet p.p_dynvar (p.p_conv x) f
+  | _ ->
+      raise (Error "param_let: not a parameter")
+;;
+
+let rec proc_has_rest : type a. a sg -> bool = function
+    Pfix sg -> proc_has_rest sg
+  | Prest _ -> true
+  | Pret _ -> false
+  | Pvoid _ -> false
+;;
+
+let rec proc_nargs : type a. a sg -> int = function
+    Pfix sg -> 1 + proc_nargs sg
+  | Pret _ -> 0
+  | Prest _ -> 1
+  | Pvoid _ -> 0
+;;
+
+let args_err sg proc_name n =
+  if proc_has_rest sg then
+    Printf.sprintf "procedure %s expected %d or more args got %d"
+      proc_name (proc_nargs sg - 1) n
+  else
+    Printf.sprintf "procedure %s expected %d args got %d"
+      proc_name (proc_nargs sg) n
+;;
+
+let rec apply th p av =
+  match p with
+    Sprim p
+  | Sproc p ->
+      let Pf (sg, f) = p.proc_fun in 
+      let ret : type a. a ret -> a -> sval = fun r f ->
+        match r with
+          Rval ->
+            f
+        | Rcont ->
+            f th
+      in
+      let rec loop : type a. a sg -> a -> _ -> sval = fun sg f al ->
+        match sg, al with
+          Pfix sg, a :: al ->
+            loop sg (f a) al
+        | Prest r, _ ->
+            ret r (f al)
+        | Pret r, [] ->
+            ret r f
+        | Pvoid r, [] ->
+            ret r (f ())
+        | _ ->
+            raise (Error (args_err sg p.proc_name (List.length av)))
+      in
+        loop sg f av
+  | Sparam _ as p ->
+      begin
+        match av with
+          [] -> get_param p
+        | a :: [] -> set_param p a; Sunspec
+        | _ ->
+            raise (Error ("apply: parameter expected 1 or 2 args, got " ^ (string_of_int (List.length av))))
+      end
+  | _ ->
+      raise (Error "apply: not a procedure or primitive")
+;;
+
 let do_apply f av th =
   let rec loop = function
       [] -> raise (Error "apply: bad args")
@@ -103,7 +206,17 @@ let do_apply f av th =
     | a :: av -> a :: loop av
   in
   let args = loop av in
-    doapply th f args
+    apply th f args
+;;
+
+let make_parameter args th =
+  match args with
+    init :: [] ->      
+      new_param init (fun x -> x)
+  | init :: converter :: [] ->
+      new_param init (fun x -> apply th converter [ x ])
+  | _ ->
+      raise (Error "make-parameter: bad args")
 ;;
 
 let force p _ =
@@ -149,7 +262,7 @@ let map_for_each av th is_map =
           match args with
             Snull :: _ -> !result
           | Spair _ :: _ ->
-              let v = doapply th proc (List.map get_carc args) in
+              let v = apply th proc (List.map get_carc args) in
                 if is_map then append v;
                 loop (List.map get_cdr args)
           | _ -> raise (Error (my_name ^ ": invalid argument lists"))
@@ -163,36 +276,6 @@ let map av th =
 
 let for_each av th =
   map_for_each av th false
-;;
-
-let load_file e th name =
-  let inp = Ocs_port.open_input_port name in
-  let lex = Ocs_lex.make_lexer inp name in
-  let rec loop () =
-    match Ocs_read.read_expr lex with
-      Seof -> ()
-    | v ->
-        let c = compile e v in
-        let sc = stage .< th >. c in
-        let _ = Delimcc.push_prompt Ocs_contin.main_prompt (fun () -> Runcode.run sc) in
-          loop ()
-  in
-    loop ()
-;;
-
-let load_prim e a th =
-  match a with
-    Sstring name -> load_file e th name; Sunspec
-  | _ -> raise (Error "load: invalid name argument")
-;;
-
-let eval_prim expr e th =
-  match e with
-    Sesym (e, _) ->
-      let c = compile e expr in
-      let sc = stage .< th >. c in
-        Runcode.run sc
-  | _ -> raise (Error "eval: invalid args")
 ;;
 
 let report_env e _ =
@@ -231,13 +314,12 @@ let init e =
 
   set_pfg e (Pfix (Prest Rcont)) do_apply "apply";
 
+  set_pfg e (Prest Rcont) make_parameter "make-parameter";
+
   set_pfg e (Pfix (Pret Rcont)) force "force";
 
   set_pfg e (Prest Rcont) map "map";
   set_pfg e (Prest Rcont) for_each "for-each";
-
-  set_pfg e (Pfix (Pret Rcont)) (load_prim e) "load";
-  set_pfg e (Pfix (Pfix (Pret Rcont))) eval_prim "eval";
 
   set_pf1 e (report_env (env_copy e)) "scheme-report-environment";
   set_pf1 e null_env "null-environment";
