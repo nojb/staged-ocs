@@ -166,9 +166,12 @@ let rec stage e th =
            end >.
   | Clambda { lam_has_rest = hr; lam_body = body; lam_args = args; lam_name = n } ->
       let rec scanargs cc = function
-          [] -> cc.cc (Pret Rcont)
-        | _ :: [] when hr -> cc.cc (Prest Rcont)
-        | _ :: rest -> scanargs { cc = fun sg -> cc.cc (Pfix sg) } rest
+          [] ->
+            cc.cc Pvoid
+        | _ :: [] ->
+            if hr then cc.cc Prest else cc.cc (Pfix Pret)
+        | _ :: rest ->
+            scanargs { cc = fun sg -> cc.cc (Pfix sg) } rest
       in
       let rec mkargs : type a. _ -> _ -> a sg -> a code = fun e largs sg ->
         match largs, sg with
@@ -181,7 +184,9 @@ let rec stage e th =
         | a :: [], Prest Rcont ->
             .< fun x th ->
                .~(bind e a .< list_of_caml x >.
-                    (fun e -> stage e .< th >. body)) >.
+                    (fun e -> stage e body)) >.
+        | [], Pvoid ->
+            .< fun () -> .~(stage e body) >.
         | _ ->
             assert false
       in
