@@ -55,19 +55,19 @@ let args_err sg proc_name n =
     Printf.sprintf "procedure %s expected %d args got %d"
       proc_name (proc_nargs sg) n
 
-let rec doapply th (cc : sval -> unit) p av =
+let rec doapply th p av =
   match p with
     Sprim p
   | Sproc p ->
       let Pf (sg, f) = p.proc_fun in 
-      let ret : type a. a ret -> a -> unit = fun r f ->
+      let ret : type a. a ret -> a -> sval = fun r f ->
         match r with
           Rval ->
-            cc f
+            f
         | Rcont ->
-            f th cc
+            f th
       in
-      let rec loop : type a. a sg -> a -> _ -> unit = fun sg f al ->
+      let rec loop : type a. a sg -> a -> _ -> sval = fun sg f al ->
         match sg, al with
           Pfix sg, a :: al ->
             loop sg (f a) al
@@ -91,104 +91,85 @@ type 'b slambda_c =
     cc : 'a. 'a sg -> 'b
   }
 
-let rec stage e th cc =
+let rec stage e th =
   function
-    Cval v -> cc .< v >.
+    Cval v -> .< v >.
   | Cseq s ->
       let rec loop =
         function
           [] ->
-            cc .< Sunspec >.
+            .< Sunspec >.
         | s :: [] ->
-            stage e th cc s
+            stage e th s
         | s :: sl ->
-            stage e th (fun v -> .< let _ = .~v in .~(loop sl) >.) s
+            .< let _ = .~(stage e th s) in .~(loop sl) >.
       in
-      loop s
+        loop s
   | Cand s ->
-      .< let cc x = .~(cc .< x >.) in
-           .~begin
-             let rec loop =
-               function
-                 [] -> .< cc Strue >.
-               | s :: [] ->
-                   stage e th (fun x -> .< cc .~x >.) s
-               | s :: sl ->
-                   stage e th
-                     (fun v ->
-                        .< match .~v with
-                             Sfalse -> cc Sfalse
-                           | _ -> .~(loop sl) >.) s
-             in
-               loop s
-           end >.
+      let rec loop =
+        function
+          [] -> .< Strue >.
+        | s :: [] ->
+            stage e th s
+        | s :: sl ->
+            .< match .~(stage e th s) with
+                 Sfalse -> Sfalse
+               | _ -> .~(loop sl) >.
+      in
+        loop s
   | Cor s ->
-      .< let cc x = .~(cc .< x >.) in
-           .~begin
-             let rec loop =
-               function
-                 [] -> .< cc Sfalse >.
-               | s :: [] ->
-                   stage e th (fun x -> .< cc .~x >.) s
-               | s :: sl ->
-                   stage e th
-                     (fun v ->
-                        .< match .~v with
-                             Sfalse -> .~(loop sl)
-                           | x -> cc x >.) s
-             in
-               loop s
-           end >.
+      let rec loop =
+        function
+          [] -> .< Sfalse >.
+        | s :: [] ->
+            stage e th s
+        | s :: sl ->
+            .< match .~(stage e th s) with
+                 Sfalse -> .~(loop sl)
+               | _ as x -> x >.
+      in
+        loop s
   | Cif (c, tx, fx) ->
-      .< let cc x = .~(cc .< x >.) in
-           .~(stage e th
-                (fun v ->
-                   .< match .~v with
-                        Sfalse ->
-                          .~(stage e th (fun x -> .< cc .~x >.) fx)
-                      | _ ->
-                          .~(stage e th (fun x -> .< cc .~x >.) tx) >.)
-                c) >.
+      .< match .~(stage e th c) with
+           Sfalse -> .~(stage e th fx)
+         | _ -> .~(stage e th tx) >.
   | Csetg (g, c) ->
-      stage e th
-        (fun v ->
-          let err = "set!: unbound variable " ^ (sym_name g.g_sym) in
-            .< if g.g_val == Sunbound then
-                 raise (Error err)
-               else
-                 let () = g.g_val <- .~v in .~(cc .< Sunspec >.) >.) c
+      let err = "set!: unbound variable " ^ (sym_name g.g_sym) in
+        .< if g.g_val == Sunbound then
+             raise (Error err)
+           else
+             let () = g.g_val <- .~(stage e th c) in Sunspec >.
   | Csetl (i, c) ->
-      stage e th (fun v -> .< let () = .~(setl e i v) in .~(cc .< Sunspec >.) >.) c
+      .< let () = .~(setl e i (stage e th c)) in Sunspec >.
   | Cdefine (g, c) ->
-      stage e th (fun v -> .< let () = g.g_val <- .~v in .~(cc .< Sunspec >.) >.) c
+      .< let () = g.g_val <- .~(stage e th c) in Sunspec >.
   | Cgetg g ->
       let err = "unbound variable: " ^ (sym_name g.g_sym) in
         .< if g.g_val == Sunbound then
              raise (Error err)
            else
-             .~(cc .< g.g_val >.) >.
-  | Cgetl i -> cc (getl e i)
+             g.g_val >.
+  | Cgetl i ->
+      getl e i
   | Capply (Cval (Sprim p), av) ->
       begin
         let Pf (sg, f) = p.proc_fun in
-        let ret : type a. a ret -> a code -> unit code = fun r f ->
+        let ret : type a. a ret -> a code -> sval code = fun r f ->
           match r with
             Rval ->
-              cc f
+              f
           | Rcont ->
-              .< .~f .~th (fun x -> .~(cc .< x >.)) >.
+              .< .~f .~th >.
         in
-        let rec loop : type a. a sg -> a code -> _ -> unit code = fun sg f al ->
+        let rec loop : type a. a sg -> a code -> _ -> sval code = fun sg f al ->
           match sg, al with
             Pfix sg, a :: al ->
-              stage e th (fun a -> loop sg .< .~f .~a >. al) a
+              loop sg .< .~f .~(stage e th a) >. al
           | Prest r, _ ->
               let rec mkrest cc = function
                   [] -> cc .< [] >.
                 | a :: al ->
-                    stage e th
-                      (fun a ->
-                        mkrest (fun al -> cc .< .~a :: .~al >.) al) a
+                    mkrest (fun al -> cc .< .~(stage e th a) :: .~al >.) al
               in
                 mkrest (fun al -> ret r .< .~f .~al >.) al
           | Pret r, [] ->
@@ -205,39 +186,32 @@ let rec stage e th cc =
       let rec loop e args vals =
         match args, vals with
           [], [] ->
-            stage e th cc l.lam_body
+            stage e th l.lam_body
         | [a], _ when l.lam_has_rest ->
             let rec mkrest cc = function
                 [] -> cc .< Snull >.
               | v :: vals ->
-                  stage e0 th
-                    (fun v ->
-                       mkrest (fun vals -> cc .< Spair { car = .~v; cdr = .~vals } >.) vals)
-                    v
+                  mkrest (fun vals -> cc .< Spair { car = .~(stage e0 th v); cdr = .~vals } >.) vals
             in
               mkrest (fun rest -> bind e a rest (fun e -> loop e [] [])) vals
         | a :: args, v :: vals ->
-            stage e0 th (fun v -> bind e a v (fun e -> loop e args vals)) v
+            bind e a (stage e0 th v) (fun e -> loop e args vals)
         | _ ->
             raise (Error "apply: wrong number of arguments")
       in
         loop e l.lam_args a
   | Capply (c, a) ->
-      stage e th
-        (fun cv ->
-          .< let f = .~cv in
-               .~begin
-                 let rec loop cc = function
-                     [] -> cc .< [] >.
-                   | a :: al ->
-                       stage e th
-                         (fun a ->
-                           loop (fun al -> cc .< .~a :: .~al >.) al) a
-                 in
-                   loop
-                     (fun al -> .< doapply .~th (fun x -> .~(cc .<x>.)) f .~al >.)
-                     a
-               end >.) c
+      .< let f = .~(stage e th c) in
+           .~begin
+             let rec loop cc = function
+                 [] -> cc .< [] >.
+               | a :: al ->
+                   loop (fun al -> cc .< .~(stage e th a) :: .~al >.) al
+             in
+               loop
+                 (fun al -> .< doapply .~th f .~al >.)
+                 a
+           end >.
   | Clambda { lam_has_rest = hr; lam_body = body; lam_args = args; lam_name = n } ->
       let rec scanargs cc = function
           [] -> cc.cc (Pret Rcont)
@@ -250,38 +224,36 @@ let rec stage e th cc =
             .< fun x ->
                .~(bind e b .< x >. (fun e -> mkargs e largs sg)) >.
         | [], Pret Rcont ->
-            .< fun th cc ->
-               .~(stage e .< th >. (fun x -> .< cc .~x >.) body) >.
+            .< fun th ->
+               .~(stage e .< th >. body) >.
         | a :: [], Prest Rcont ->
-            .< fun x th cc ->
+            .< fun x th ->
                .~(bind e a .< list_of_caml x >.
-                    (fun e -> stage e .< th >. (fun x -> .< cc .~x >.) body)) >.
+                    (fun e -> stage e .< th >. body)) >.
         | _ ->
             assert false
       in
       let pf = scanargs { cc = fun sg -> .< Pf (sg, .~(mkargs e args sg)) >. } args in
       let proc_name = match n with None -> "#<unknown>" | Some n -> n in
-        cc .< Sproc { proc_name; proc_fun = .~pf } >.
+        .< Sproc { proc_name; proc_fun = .~pf } >.
   | Cqqp (h, t) ->
       begin
         match h with
           Cqqspl x ->
-            stage e th (fun usl -> stage e th (fun t ->
-                let findtl usl t =
-                  let rec loop =
-                    function
-                      Spair ({ car = _; cdr = Snull } as p) ->
-                        p.cdr <- t; usl
-                    | Spair { car = _; cdr = nt } -> loop nt
-                    | Snull -> t
-                    | _ -> raise (Error "unquote-splicing: not a list")
-                  in
-                    loop usl
-                in
-                  cc .< findtl .~usl .~t >.) t) x
+            let findtl usl t =
+              let rec loop =
+                function
+                  Spair ({ car = _; cdr = Snull } as p) ->
+                    p.cdr <- t; usl
+                | Spair { car = _; cdr = nt } -> loop nt
+                | Snull -> t
+                | _ -> raise (Error "unquote-splicing: not a list")
+              in
+                loop usl
+            in
+              .< findtl .~(stage e th x) .~(stage e th t) >.
         | _ ->
-            stage e th (fun h -> stage e th (fun t ->
-              cc .< Spair { car = .~h; cdr = .~t } >.) t) h
+            .< Spair { car = .~(stage e th h); cdr = .~(stage e th t) } >.
       end
   | Cqqv v ->
       let n = List.length v in
@@ -289,9 +261,10 @@ let rec stage e th cc =
              .~begin
                let rec loop i =
                  function
-                   [] -> cc .< Svector qv >.
+                   [] ->
+                     .< Svector qv >.
                  | v :: vl ->
-                     stage e th (fun x -> .< let () = qv.(i) <- .~x in .~(loop (i+1) vl) >.) v
+                     .< let () = qv.(i) <- .~(stage e th v) in .~(loop (i+1) vl) >.
                in
                  loop 0 v
              end >.
@@ -299,85 +272,82 @@ let rec stage e th cc =
       begin
         let rec loop r =
           function
-            [] -> cc .< Svector (Array.of_list .~r) >.
+            [] ->
+              .< Svector (Array.of_list .~r) >.
           | (Cqqspl x)::t ->
-              stage e th (fun l -> loop .< (list_to_caml .~l) @ .~r >. t) x
+              loop .< (list_to_caml .~(stage e th x)) @ .~r >. t
           | h::t ->
-              stage e th (fun x -> loop .< .~x :: .~r >. t) h
+              loop .< .~(stage e th h) :: .~r >. t
         in
           loop .< [] >. (List.rev l)
       end
-  | Cqqspl x -> raise (Error "unquote-splicing: not valid here")
+  | Cqqspl x ->
+      raise (Error "unquote-splicing: not valid here")
   | Ccond av ->
-      .< let cc x = .~(cc .<x>.) in
+      let rec loop =
+        function
+          [] ->
+            .< Sunspec >.
+        | (Ccondspec c, b) :: al ->
+            .< match .~(stage e th c) with
+                 Sfalse ->
+                   .~(loop al)
+               | _ as v ->
+                   doapply .~th .~(stage e th b) [ v ] >.
+        | (c, b) :: al ->
+            .< match .~(stage e th c) with
+                 Sfalse ->
+                   .~(loop al)
+               | _ ->
+                   .~(stage e th b) >.
+      in
+        loop av
+  | Ccase (c, m) ->
+      .< let v = .~(stage e th c) in
            .~begin
              let rec loop =
                function
                  [] ->
-                   .< cc Sunspec >.
-               | (Ccondspec c, b) :: al ->
-                   stage e th
-                     (fun v ->
-                        .< match .~v with
-                             Sfalse -> .~(loop al)
-                           | _ as v ->
-                               .~(stage e th (fun b -> .< doapply .~th cc .~b [ v ] >.) b) >.)
-                     c
-               | (c, b) :: al ->
-                   stage e th
-                     (fun v ->
-                        .< match .~v with
-                             Sfalse -> .~(loop al)
-                           | _ -> .~(stage e th (fun x -> .< cc .~x >.) b) >.) c
+                   .< Sunspec >.
+               | ([], b) :: _ ->
+                   stage e th b
+               | (mv, b) :: ml ->
+                   let rec has =
+                     function
+                       [] ->
+                         assert false
+                     | mvv :: [] ->
+                         .< mvv == v || test_eqv mvv v >.
+                     | mvv :: mvvl ->
+                         .< mvv == v || test_eqv mvv v || .~(has mvvl) >.
+                   in
+                     .< if .~(has mv) then
+                          .~(stage e th b)
+                        else
+                          .~(loop ml) >.
              in
-               loop av
+               loop m
            end >.
-  | Ccase (c, m) ->
-      stage e th
-        (fun v ->
-           .< let cc x = .~(cc .< x >.) in
-              let v = .~v in
-                .~begin
-                  let rec loop =
-                    function
-                      [] ->
-                        .< cc Sunspec >.
-                    | ([], b) :: _ ->
-                        stage e th (fun x -> .< cc .~x >.) b
-                    | (mv, b) :: ml ->
-                        let rec has =
-                          function
-                            [] ->
-                              assert false
-                          | mvv :: [] ->
-                              .< mvv == v || test_eqv mvv v >.
-                          | mvv :: mvvl ->
-                              .< mvv == v || test_eqv mvv v || .~(has mvvl) >.
-                        in
-                          .< if .~(has mv) then
-                               .~(stage e th (fun x -> .< cc .~x >.) b)
-                             else
-                               .~(loop ml) >.
-                  in
-                    loop m
-                end >.) c
   | Cdelay c ->
-      .< let p = let r = ref None in fun cc ->
+      .< let p = let r = ref None in fun () ->
            match !r with
              None ->
                (* TODO check if `th` should be somehow freed after forcing the promise . *)
-               .~(stage e th (fun v ->
-                   .< let v = .~v in
-                        match !r with
-                          None ->
-                            let () = r := Some v in cc v
-                        | Some v -> cc v >.) c)
+               begin
+                 let v = .~(stage e th c) in
+                   match !r with
+                     None ->
+                       (r := Some v; v)
+                   | Some v ->
+                       v
+               end
            | Some v ->
-               cc v
+               v
          in
-           .~(cc .< Spromise p >.) >.
-  | _ -> raise (Error "stage: internal error")
+           Spromise p >.
+  | _ ->
+      raise (Error "stage: internal error")
 ;;
 
-let stage th cc c =
-  stage [] th cc c
+let stage th c =
+  stage [] th c

@@ -51,18 +51,18 @@ let rec find_depth fdx tdx al bl =
 (*   | av -> dxswitch th.th_dynext dx (fun () -> cc (Svalues av)) *)
 (* ;; *)
 
-let call_cc proc th cc =
-  let cont =
-    let continuation al _ _ =
-      match al with
-        [ x ] -> cc x
-      | _ -> cc (Svalues al)
-    in
-      Sproc { proc_name = "<continuation>";
-              proc_fun = Pf (Prest Rcont, continuation) }
-  in
-    doapply th cc proc [ cont ]
-;;
+(* let call_cc proc th cc = *)
+(*   let cont = *)
+(*     let continuation al _ _ = *)
+(*       match al with *)
+(*         [ x ] -> cc x *)
+(*       | _ -> cc (Svalues al) *)
+(*     in *)
+(*       Sproc { proc_name = "<continuation>"; *)
+(*               proc_fun = Pf (Prest Rcont, continuation) } *)
+(*   in *)
+(*     doapply th cc proc [ cont ] *)
+(* ;; *)
 
 let values =
   function
@@ -70,13 +70,12 @@ let values =
   | av -> Svalues av
 ;;
 
-let call_values producer consumer th cc =
-  doapply th (function
-        Svalues av ->
-          doapply th cc consumer av
-      | x ->
-          doapply th cc consumer [x])
-    producer []
+let call_values producer consumer th =
+  match doapply th producer [] with
+    Svalues av ->
+      doapply th consumer av
+  | x ->
+      doapply th consumer [x]
 ;;
 
 (* let dynamic_wind th cc = *)
@@ -102,8 +101,8 @@ let call_values producer consumer th cc =
 (* ;; *)
 
 let init e =
-  set_pfg e (Pfix (Pret Rcont)) call_cc "call-with-current-continuation";
-  set_pfg e (Pfix (Pret Rcont)) call_cc "call/cc";
+  (* set_pfg e (Pfix (Pret Rcont)) call_cc "call-with-current-continuation"; *)
+  (* set_pfg e (Pfix (Pret Rcont)) call_cc "call/cc"; *)
 
   set_pfn e values "values";
 

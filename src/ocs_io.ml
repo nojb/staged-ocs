@@ -18,39 +18,39 @@ let get_stdout th =
   | _ -> assert false
 ;;
 
-let read th cc =
+let read th =
   function
     [] ->
-      cc (Ocs_read.read_from_port (get_stdin th))
-  | [ Sport port ] -> cc (Ocs_read.read_from_port port)
+      Ocs_read.read_from_port (get_stdin th)
+  | [ Sport port ] -> Ocs_read.read_from_port port
   | _ -> raise (Error "read: bad args")
 ;;
 
-let rdchr p cc =
+let rdchr p =
   match Ocs_port.getc p with
-    Some c -> cc (Schar c)
-  | None -> cc Seof
+    Some c -> Schar c
+  | None -> Seof
 ;;
 
-let read_char th cc =
+let read_char th =
   function
-    [ ] -> rdchr (get_stdin th) cc
-  | [ Sport port ] -> rdchr port cc
+    [ ] -> rdchr (get_stdin th)
+  | [ Sport port ] -> rdchr port
   | _ -> raise (Error "read-char: bad args")
 ;;
 
-let peekchr p cc =
+let peekchr p =
   match Ocs_port.getc p with
     Some c ->
       Ocs_port.ungetc p c;
-      cc (Schar c)
-  | None -> cc Seof
+      Schar c
+  | None -> Seof
 ;;
 
-let peek_char th cc =
+let peek_char th =
   function
-    [ ] -> peekchr (get_stdin th) cc
-  | [ Sport port ] -> peekchr port cc
+    [ ] -> peekchr (get_stdin th)
+  | [ Sport port ] -> peekchr port
   | _ -> raise (Error "peek-char: bad args")
 ;;
 
@@ -60,58 +60,58 @@ let eof_object =
   | _ -> Sfalse
 ;;
 
-let chrdy p cc =
-  cc (if Ocs_port.char_ready p then Strue else Sfalse)
+let chrdy p =
+  if Ocs_port.char_ready p then Strue else Sfalse
 ;;
 
-let char_ready th cc =
+let char_ready th =
   function
-    [ ] -> chrdy (get_stdin th) cc
-  | [ Sport port ] -> chrdy port cc
+    [ ] -> chrdy (get_stdin th)
+  | [ Sport port ] -> chrdy port
   | _ -> raise (Error "char-ready?: bad args")
 ;;
 
-let display th cc =
+let display th =
   function
     [ obj ] ->
-      let p = get_stdout th in print p true obj; Ocs_port.flush p; cc Sunspec
-  | [ obj; Sport p ] -> print p true obj; Ocs_port.flush p; cc Sunspec
+      let p = get_stdout th in print p true obj; Ocs_port.flush p; Sunspec
+  | [ obj; Sport p ] -> print p true obj; Ocs_port.flush p; Sunspec
   | _ -> raise (Error "display: bad args")
 ;;
 
-let write th cc =
+let write th =
   function
     [ obj ] ->
-      let p = get_stdout th in print p false obj; Ocs_port.flush p; cc Sunspec
-  | [ obj; Sport p ] -> print p false obj; Ocs_port.flush p; cc Sunspec
+      let p = get_stdout th in print p false obj; Ocs_port.flush p; Sunspec
+  | [ obj; Sport p ] -> print p false obj; Ocs_port.flush p; Sunspec
   | _ -> raise (Error "write: bad args")
 ;;
 
-let write_char th cc =
+let write_char th =
   function
     [ Schar c ] ->
-      let p = get_stdout th in Ocs_port.putc p c; Ocs_port.flush p; cc Sunspec
-  | [ Schar c; Sport p ] -> Ocs_port.putc p c; Ocs_port.flush p; cc Sunspec
+      let p = get_stdout th in Ocs_port.putc p c; Ocs_port.flush p; Sunspec
+  | [ Schar c; Sport p ] -> Ocs_port.putc p c; Ocs_port.flush p; Sunspec
   | _ -> raise (Error "write-char: bad args")
 ;;
 
-let newline th cc =
+let newline th =
   function
     [ ] ->
-      let p = get_stdout th in Ocs_port.putc p '\n'; Ocs_port.flush p; cc Sunspec
-  | [ Sport p ] -> Ocs_port.putc p '\n'; Ocs_port.flush p; cc Sunspec
+      let p = get_stdout th in Ocs_port.putc p '\n'; Ocs_port.flush p; Sunspec
+  | [ Sport p ] -> Ocs_port.putc p '\n'; Ocs_port.flush p; Sunspec
   | _ -> raise (Error "newline: bad args")
 ;;
 
-let current_input th cc =
+let current_input th =
   function
-    [ ] -> cc th.th_stdin
+    [ ] -> th.th_stdin
   | _ -> raise (Error "current-input-port: bad args")
 ;;
 
-let current_output th cc =
+let current_output th =
   function
-    [ ] -> cc th.th_stdout
+    [ ] -> th.th_stdout
   | _ -> raise (Error "current-output-port: bad args")
 ;;
 
@@ -155,26 +155,32 @@ let scm_close_port p =
    for this because closing and reopening the file would be an even
    bigger problem.  *)
 
-let call_w_in name proc th cc =
+let call_w_in name proc th =
   let p = open_input_file name in
-    doapply th (fun x -> close_port p; cc x) proc [p]
+  let x = doapply th proc [p] in
+    close_port p;
+    x
 ;;
 
-let call_w_out name proc th cc =
+let call_w_out name proc th =
   let p = open_output_file name in
-    doapply th (fun x -> close_port p; cc x) proc [p]
+  let x = doapply th proc [p] in
+    close_port p;
+    x
 ;;
 
-let w_in name thunk th cc =
+let w_in name thunk th =
   let p = open_input_file name in
-    doapply { th with th_stdin = p }
-      (fun x -> close_port p; cc x) thunk []
+  let x = doapply { th with th_stdin = p } thunk [] in
+    close_port p;
+    x
 ;;
 
-let w_out name thunk th cc =
+let w_out name thunk th =
   let p = open_output_file name in
-    doapply { th with th_stdout = p }
-      (fun x -> close_port p; cc x) thunk []
+  let x = doapply { th with th_stdout = p } thunk [] in
+    close_port p;
+    x
 ;;
 
 let init e =

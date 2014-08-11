@@ -53,20 +53,22 @@ let top_loop env th =
           Seof -> ()
         | v ->
             let c = compile env v in
-            let cv = stage .< th >. (fun v ->
-                .< match .~v with
-                     Sunspec -> ()
-                   | r ->
-                       print outp false r;
-                       Ocs_port.putc outp '\n' >.) c in
+            let cv = stage .< th >. c in
               if !dstaged then
                 begin
                   Print_code.print_code Format.str_formatter cv;
                   Ocs_port.puts errp (Format.flush_str_formatter ());
                   Ocs_port.flush errp
                 end;
-              Runcode.run cv;
-              loop ()
+              let v = Runcode.run cv in
+                begin
+                  match v with
+                    Sunspec -> ()
+                  | r ->
+                      print outp false r;
+                      Ocs_port.putc outp '\n'
+                end;
+                loop ()
       with Error err | ErrorL (_, err) ->
         Ocs_port.puts errp ("Error: " ^ err ^ "\n");
         Ocs_port.flush errp;
