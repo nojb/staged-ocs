@@ -97,7 +97,12 @@ let is_equal a b =
 let param_get p =
   match p with
     Sparam p ->
-      Dynvar.dref p.p_dynvar
+      begin
+        try
+          Dynvar.dref p.p_dynvar
+        with
+          _ -> p.p_conv p.p_init
+      end
   | _ ->
       raise (Error "param_get: not a parameter")
 ;;
@@ -174,7 +179,13 @@ let rec apply th p av =
       in
         loop sg f av
   | Sparam _ as p ->
-      param_get p
+      begin
+        match av with
+          [] -> param_get p
+        | a :: [] -> param_set p a; Sunspec
+        | _ ->
+            raise (Error ("apply: parameter expected 1 or 2 args, got " ^ (string_of_int (List.length av))))
+      end
   | _ ->
       raise (Error "apply: not a procedure or primitive")
 ;;
