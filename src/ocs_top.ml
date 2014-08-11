@@ -24,6 +24,7 @@ let make_env () =
     Ocs_string.init e;
     Ocs_contin.init e;
     Ocs_io.init e;
+    Ocs_param.init e;
     e
 ;;
 

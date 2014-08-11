@@ -81,6 +81,13 @@ let rec doapply th p av =
             raise (Error (args_err sg p.proc_name (List.length av)))
       in
         loop sg f av
+  | Sparam p ->
+      begin
+        try
+          Dynvar.dref p.p_dynvar
+        with
+          _ -> p.p_conv p.p_init
+      end
   | _ ->
       raise (Error "apply: not a procedure or primitive")
 
@@ -330,6 +337,20 @@ let rec stage e th =
            end >.
   | Cdelay c ->
       .< Spromise (lazy .~(stage e th c)) >.
+  | Cparam (ps, c) ->
+      let rec loop =
+        function
+          [] ->
+            stage e th c
+        | (p, v) :: ps ->
+            .< match .~(stage e th p) with
+                 Sparam p ->
+                   Dynvar.dlet p.p_dynvar (p.p_conv .~(stage e th v))
+                     (fun () -> .~(loop ps))
+               | _ ->
+                   raise (Error "parametrize: bad args") >.
+      in
+        loop ps
   | _ ->
       raise (Error "stage: internal error")
 ;;

@@ -72,11 +72,21 @@ type sval =
   (* An unspecified value.  *)
   | Sunspec
 
+  (* A dynamic parameter.  *)
+  | Sparam of sparam
+
   (* The actual type of a pair (cons cell).  *)
 and spair =
   {
     mutable car : sval;
     mutable cdr : sval
+  }
+
+and sparam =
+  {
+    p_dynvar : sval Dynvar.dynvar;
+    p_init : sval;
+    p_conv : sval -> sval
   }
 
 and _ ret =
@@ -123,6 +133,7 @@ and scode =
   | Ccondspec of scode
   | Ccase of scode * (sval list * scode) list
   | Cdelay of scode
+  | Cparam of (scode * scode) list * scode
 
 and slambda =
   {

@@ -28,6 +28,7 @@ val sym_arrow : sval
 val sym_define : sval
 val sym_unquote : sval
 val sym_unquote_splicing : sval
+val sym_parametrize : sval
 
 val sym_define_syntax : sval
 val sym_let_syntax : sval
