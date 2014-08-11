@@ -11,7 +11,9 @@ The rest of this file gives some information about this implementation.  Most of
 the text is a direct copy or a very ligthly edited copy of the README file of
 the original `ocs` (see next section).
 
-Contact: Nicolas Ojeda Bar (<n.oje.bar@gmail.com>)
+Contact: [Nicolas Ojeda Bar][]
+
+[Nicolas Ojeda Bar]: n.oje.bar@gmail.com
 
 ## Acknowledgements
 
@@ -34,16 +36,28 @@ Known deviations from R5RS:
 
 Anything else that does not work as specified in R5RS is a bug.
 
+Extensions from R5RS:
+
+- [SRFI 39][], which is part of R7RS.  `current-input-port` and
+  `current-output-port` are parameter objects.
+
+[SRFI 39]: http://srfi.schemers.org/srfi-39/srfi-39.html
+
 ## Installation
 
 Requirements:
 
 - GNU make
-- MetaOCaml BER 101 (<http://okmij.org/ftp/ML/MetaOCaml.html>)
+- [MetaOCaml BER 101][]
+- [Delimcc][]
 
-In order to install MetaOCaml, the easiest way is to use opam (<https://opam.ocaml.org>).
+[MetaOCaml BER 101]: http://okmij.org/ftp/ML/MetaOCaml.html
+[Delimcc]: http://okmij.org/ftp/continuations/implementations.html#caml-shift
+
+In order to install MetaOCaml, the easiest way is to use [OPAM][].
 
     opam switch 4.01.0+BER
+    opam install delimcc
 
 Once MetaOCaml is installed, clone the git repository and type make in the `src` directory.
 
@@ -54,6 +68,8 @@ Once MetaOCaml is installed, clone the git repository and type make in the `src`
  
 This should produce a stand-alone, bytecode interpreter (`ocs_main.byte`). **See
 the next section for information on how to run it.**
+
+[OPAM]: https://opam.ocaml.org
 
 ## The 'ocs_main.byte' command
 
@@ -85,13 +101,20 @@ are done:
   global slots (`Ocs_types.gvar`) or frame indices (the actual frames are
   implicitly kept by the OCaml interpreter at run-time).
 
-- Scheme has capturable, first-class continuations.  Most of the evaluator is
-  written in continuation-passing style in order to allow this.
+- Scheme has capturable, first-class continuations.  The generated code is in
+  direct style however, and `call/cc` is implemented using Oleg's [Delimcc][].
+
+- The implementation of parameters (dynamically scoped variables) is complicated
+  by the presence of first-class continuations.  We use Oleg's [Dynvar][] module
+  to implement them.  Since `Dynvar` is implemented in terms of [Delimcc][],
+  they are compatible with `call/cc`.
+
+[Dynvar]: http://okmij.org/ftp/ML/#dynvar
+
+## Staging
 
 Where discussing types, the rest of this section assumes that the types defined
 in the module `Ocs_types` are visible.
-
-## Staging
 
 Scheme values (S-expressions) are of the type `sval`.
 
@@ -108,27 +131,26 @@ language bindings can be created using
 
 Staging is done by
 
-    Ocs_eval.stage : thread code -> (sval code -> unit code) -> scode -> unit code
+    Ocs_eval.stage : thread code -> scode -> sval code
 
-where the second argument is a continuation to pass the result to.
-
-The `thread` type is used at run-time for storing the current input/output ports
-and the current dynamic extent.  It does not represent a thread in the
-concurrent sense, but rather the evaluation state, and is copied and changed
+The `thread` type is used at run-time to store the current dynamic extent (for
+`dynamic-wind`, currently not implemented).  It does not represent a thread in
+the concurrent sense, but rather the evaluation state, and is copied and changed
 rather than modified in place.  The initial thread can be created using
 `Ocs_top.make_thread : unit -> thread`.
 
 ## Continuations and I/O
 
-Any continuations captured are associated with the thread at the time of
-capture, so if a continuation is used to escape a `with-input-from-file` or
-`with-output-to-file`, the input/output port is restored to those of the time of
-capture.
+The current input/output port are stored in R7RS-style parameters (dynamically
+scoped variables).  As such, if a continuation is used to escape a
+`with-input-from-file` or `with-output-to-file`, the input/output port is
+restored to those of the time of capture.
 
 If a continuation is used to return to a `with-input-from-file` or
 `with-output-to-file`, the port is once again set to the one opened by the
 `with-...-file` call.  However, if the thunk has already exited once, the port
-will be closed and no longer be valid for I/O calls.
+will be closed and no longer be valid for I/O calls (**FIXME: check if this is
+still accurate.**)
 
 ## Numbers
 
