@@ -174,7 +174,7 @@ let load_file e th name =
     | v ->
         let c = compile e v in
         let sc = stage .< th >. c in
-        let _ = Runcode.run sc in
+        let _ = Delimcc.push_prompt Ocs_contin.main_prompt (fun () -> Runcode.run sc) in
           loop ()
   in
     loop ()

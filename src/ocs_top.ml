@@ -60,7 +60,9 @@ let top_loop env th =
                   Ocs_port.puts errp (Format.flush_str_formatter ());
                   Ocs_port.flush errp
                 end;
-              let v = Runcode.run cv in
+              let v =
+                Delimcc.push_prompt Ocs_contin.main_prompt (fun () -> Runcode.run cv)
+              in
                 begin
                   match v with
                     Sunspec -> ()
