@@ -94,7 +94,16 @@ let is_equal a b =
   if test_equal a b then Strue else Sfalse
 ;;
 
-let param_get p =
+let new_param i c =
+  Sparam
+    {
+      p_dynvar = Dynvar.dnew ();
+      p_init = i;
+      p_conv = c
+    }
+;;
+
+let get_param p =
   match p with
     Sparam p ->
       begin
@@ -107,7 +116,7 @@ let param_get p =
       raise (Error "param_get: not a parameter")
 ;;
 
-let param_set p x =
+let set_param p x =
   match p with
     Sparam p ->
       begin
@@ -121,7 +130,7 @@ let param_set p x =
       raise (Error "param_set: not a parameter")
 ;;
 
-let param_let p x f =
+let let_param p x f =
   match p with
     Sparam p ->
       Dynvar.dlet p.p_dynvar (p.p_conv x) f
@@ -181,8 +190,8 @@ let rec apply th p av =
   | Sparam _ as p ->
       begin
         match av with
-          [] -> param_get p
-        | a :: [] -> param_set p a; Sunspec
+          [] -> get_param p
+        | a :: [] -> set_param p a; Sunspec
         | _ ->
             raise (Error ("apply: parameter expected 1 or 2 args, got " ^ (string_of_int (List.length av))))
       end
@@ -203,11 +212,9 @@ let do_apply f av th =
 let make_parameter args th =
   match args with
     init :: [] ->      
-      let dv = Dynvar.dnew () in
-        Sparam { p_dynvar = dv; p_init = init; p_conv = (fun x -> x) }
+      new_param init (fun x -> x)
   | init :: converter :: [] ->
-      let dv = Dynvar.dnew () in
-        Sparam { p_dynvar = dv; p_init = init; p_conv = (fun x -> apply th converter [ x ]) }
+      new_param init (fun x -> apply th converter [ x ])
   | _ ->
       raise (Error "make-parameter: bad args")
 ;;

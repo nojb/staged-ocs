@@ -290,7 +290,7 @@ let rec stage e th =
         | (p, v) :: ps ->
             .< match .~(stage e th p) with
                  Sparam _ as p ->
-                   param_let p .~(stage e th v) (fun () -> .~(loop ps))
+                   let_param p .~(stage e th v) (fun () -> .~(loop ps))
                | _ ->
                    raise (Error "parametrize: bad args") >.
       in

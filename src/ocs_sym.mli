@@ -29,6 +29,9 @@ val sym_define : sval
 val sym_unquote : sval
 val sym_unquote_splicing : sval
 val sym_parametrize : sval
+  
+val sym_current_input_port : sval
+val sym_current_output_port : sval
 
 val sym_define_syntax : sval
 val sym_let_syntax : sval

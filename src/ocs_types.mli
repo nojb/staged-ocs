@@ -152,11 +152,7 @@ and gvar =
 
   (* Thread state, used during evaluation.  *)
 and thread =
-  {
-    th_stdin : sval;			(* Default input port.  *)
-    th_stdout : sval;			(* Default output port.  *)
-    th_dynext : dynext option		(* Current dynamic extent.  *)
-  }
+  dynext option             (* Current dynamic extent.  *)
 
   (* Local variable slot. *)
 and vloc =

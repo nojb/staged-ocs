@@ -7,6 +7,8 @@ open Ocs_compile
 open Ocs_stage
 open Ocs_print
 open Ocs_macro
+open Ocs_prim
+open Ocs_io
 
 let dstaged = ref false
 
@@ -30,9 +32,7 @@ let make_env () =
 
 (* Create a top-level thread.  *)
 let make_thread () =
-  { th_stdin = Sport (Ocs_port.input_port stdin);
-    th_stdout = Sport (Ocs_port.output_port stdout);
-    th_dynext = None }
+  None
 ;;
 
 let get_port =
@@ -42,8 +42,8 @@ let get_port =
 ;;
 
 let top_loop env th =
-  let inp = get_port th.th_stdin
-  and outp = get_port th.th_stdout
+  let inp = get_stdin ()
+  and outp = get_stdout ()
   and errp = Ocs_port.output_port stderr in
   let lex = Ocs_lex.make_lexer inp "" in
     let rec loop () =

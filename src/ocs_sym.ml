@@ -51,7 +51,10 @@ let sym_define = get_symbol "define"
 let sym_unquote = get_symbol "unquote"
 let sym_unquote_splicing = get_symbol "unquote-splicing"
 let sym_parametrize = get_symbol "parametrize"
-    
+
+let sym_current_input_port = get_symbol "current-input-port"
+let sym_current_output_port = get_symbol "current-output-port"
+
 let sym_define_syntax = get_symbol "define-syntax"
 let sym_let_syntax = get_symbol "let-syntax"
 let sym_letrec_syntax = get_symbol "letrec-syntax"

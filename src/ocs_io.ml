@@ -5,23 +5,34 @@ open Ocs_error
 open Ocs_env
 open Ocs_prim
 open Ocs_print
+open Ocs_sym
 
-let get_stdin th =
-  match th.th_stdin with
-    Sport p -> p
-  | _ -> assert false
+let current_input_port =
+  new_param (Sport (Ocs_port.input_port stdin)) (fun x -> x)
 ;;
 
-let get_stdout th =
-  match th.th_stdout with
-    Sport p -> p
-  | _ -> assert false
+let current_output_port =
+  new_param (Sport (Ocs_port.output_port stdout)) (fun x -> x)
 ;;
 
-let read th =
+let get_stdin () =
+  match get_param current_input_port with
+    Sport p -> p
+  | _ ->
+      raise (Error "current-input-port: not a port")
+;;
+
+let get_stdout () =
+  match get_param current_output_port with
+    Sport p -> p
+  | _ ->
+      raise (Error "current-output-port: not a port")
+;;
+
+let read =
   function
     [] ->
-      Ocs_read.read_from_port (get_stdin th)
+      Ocs_read.read_from_port (get_stdin ())
   | [ Sport port ] -> Ocs_read.read_from_port port
   | _ -> raise (Error "read: bad args")
 ;;
@@ -32,9 +43,9 @@ let rdchr p =
   | None -> Seof
 ;;
 
-let read_char th =
+let read_char =
   function
-    [ ] -> rdchr (get_stdin th)
+    [ ] -> rdchr (get_stdin ())
   | [ Sport port ] -> rdchr port
   | _ -> raise (Error "read-char: bad args")
 ;;
@@ -47,9 +58,9 @@ let peekchr p =
   | None -> Seof
 ;;
 
-let peek_char th =
+let peek_char =
   function
-    [ ] -> peekchr (get_stdin th)
+    [ ] -> peekchr (get_stdin ())
   | [ Sport port ] -> peekchr port
   | _ -> raise (Error "peek-char: bad args")
 ;;
@@ -64,55 +75,43 @@ let chrdy p =
   if Ocs_port.char_ready p then Strue else Sfalse
 ;;
 
-let char_ready th =
+let char_ready =
   function
-    [ ] -> chrdy (get_stdin th)
+    [ ] -> chrdy (get_stdin ())
   | [ Sport port ] -> chrdy port
   | _ -> raise (Error "char-ready?: bad args")
 ;;
 
-let display th =
+let display =
   function
     [ obj ] ->
-      let p = get_stdout th in print p true obj; Ocs_port.flush p; Sunspec
+      let p = get_stdout () in print p true obj; Ocs_port.flush p; Sunspec
   | [ obj; Sport p ] -> print p true obj; Ocs_port.flush p; Sunspec
   | _ -> raise (Error "display: bad args")
 ;;
 
-let write th =
+let write =
   function
     [ obj ] ->
-      let p = get_stdout th in print p false obj; Ocs_port.flush p; Sunspec
+      let p = get_stdout () in print p false obj; Ocs_port.flush p; Sunspec
   | [ obj; Sport p ] -> print p false obj; Ocs_port.flush p; Sunspec
   | _ -> raise (Error "write: bad args")
 ;;
 
-let write_char th =
+let write_char =
   function
     [ Schar c ] ->
-      let p = get_stdout th in Ocs_port.putc p c; Ocs_port.flush p; Sunspec
+      let p = get_stdout () in Ocs_port.putc p c; Ocs_port.flush p; Sunspec
   | [ Schar c; Sport p ] -> Ocs_port.putc p c; Ocs_port.flush p; Sunspec
   | _ -> raise (Error "write-char: bad args")
 ;;
 
-let newline th =
+let newline =
   function
     [ ] ->
-      let p = get_stdout th in Ocs_port.putc p '\n'; Ocs_port.flush p; Sunspec
+      let p = get_stdout () in Ocs_port.putc p '\n'; Ocs_port.flush p; Sunspec
   | [ Sport p ] -> Ocs_port.putc p '\n'; Ocs_port.flush p; Sunspec
   | _ -> raise (Error "newline: bad args")
-;;
-
-let current_input th =
-  function
-    [ ] -> th.th_stdin
-  | _ -> raise (Error "current-input-port: bad args")
-;;
-
-let current_output th =
-  function
-    [ ] -> th.th_stdout
-  | _ -> raise (Error "current-output-port: bad args")
 ;;
 
 let is_input =
@@ -171,33 +170,35 @@ let call_w_out name proc th =
 
 let w_in name thunk th =
   let p = open_input_file name in
-  let x = apply { th with th_stdin = p } thunk [] in
-    close_port p;
-    x
+    let_param current_input_port p
+      (fun () ->
+         let x = apply th thunk [] in
+           close_port p; x)
 ;;
 
 let w_out name thunk th =
   let p = open_output_file name in
-  let x = apply { th with th_stdout = p } thunk [] in
-    close_port p;
-    x
+    let_param current_output_port p
+      (fun () ->
+         let x = apply th thunk [] in
+           close_port p; x)
 ;;
 
 let init e =
-  set_pfcn e read "read";
-  set_pfcn e read_char "read-char";
-  set_pfcn e peek_char "peek-char";
-  set_pfcn e char_ready "char-ready?";
+  set_pfn e read "read";
+  set_pfn e read_char "read-char";
+  set_pfn e peek_char "peek-char";
+  set_pfn e char_ready "char-ready?";
 
   set_pf1 e eof_object "eof-object?";
 
-  set_pfcn e display "display";
-  set_pfcn e newline "newline";
-  set_pfcn e write "write";
-  set_pfcn e write_char "write-char";
+  set_pfn e display "display";
+  set_pfn e newline "newline";
+  set_pfn e write "write";
+  set_pfn e write_char "write-char";
 
-  set_pfcn e current_input "current-input-port";
-  set_pfcn e current_output "current-output-port";
+  set_glob e sym_current_input_port current_input_port;
+  set_glob e sym_current_output_port current_output_port;
 
   set_pf1 e is_input "input-port?";
   set_pf1 e is_output "output-port?";
