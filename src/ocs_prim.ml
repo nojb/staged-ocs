@@ -96,24 +96,25 @@ let is_equal a b =
   if test_equal a b then Strue else Sfalse
 ;;
 
-let do_apply f av th cc =
+let do_apply f av th =
   let rec loop = function
       [] -> raise (Error "apply: bad args")
     | [a] -> list_to_caml a
     | a :: av -> a :: loop av
   in
   let args = loop av in
-    doapply th cc f args
+    doapply th f args
 ;;
 
-let force p _ cc =
+let force p _ =
   match p with
     Spromise p ->
-      p cc
-  | _ -> cc p (* if not a promise, we just return the argument *)
+      p ()
+  | _ ->
+      p (* if not a promise, we just return the argument *)
 ;;
 
-let map_for_each av th cc is_map =
+let map_for_each av th is_map =
   let my_name = if is_map then "map" else "for-each" in
     match av with
       [] | _ :: [] ->
@@ -146,24 +147,22 @@ let map_for_each av th cc is_map =
         in
         let rec loop args =
           match args with
-            Snull :: _ -> cc !result
+            Snull :: _ -> !result
           | Spair _ :: _ ->
-              doapply th
-                (fun v ->
-                   if is_map then append v;
-                   loop (List.map get_cdr args))
-                proc (List.map get_carc args)
+              let v = doapply th proc (List.map get_carc args) in
+                if is_map then append v;
+                loop (List.map get_cdr args)
           | _ -> raise (Error (my_name ^ ": invalid argument lists"))
         in
           loop args
 ;;
 
-let map av th cc =
-  map_for_each av th cc true
+let map av th =
+  map_for_each av th true
 ;;
 
-let for_each av th cc =
-  map_for_each av th cc false
+let for_each av th =
+  map_for_each av th false
 ;;
 
 let load_file e th name =
@@ -174,24 +173,24 @@ let load_file e th name =
       Seof -> ()
     | v ->
         let c = compile e v in
-        let sc = stage .< th >. (fun x -> .< let _ = .~x in () >.) c in
-          Runcode.run sc;
+        let sc = stage .< th >. c in
+        let _ = Delimcc.push_prompt Ocs_contin.main_prompt (fun () -> Runcode.run sc) in
           loop ()
   in
     loop ()
 ;;
 
-let load_prim e a th cc =
+let load_prim e a th =
   match a with
-    Sstring name -> load_file e th name; cc Sunspec
+    Sstring name -> load_file e th name; Sunspec
   | _ -> raise (Error "load: invalid name argument")
 ;;
 
-let eval_prim expr e th cc =
+let eval_prim expr e th =
   match e with
     Sesym (e, _) ->
       let c = compile e expr in
-      let sc = stage .< th >. (fun x -> .< cc .~x >.) c in
+      let sc = stage .< th >. c in
         Runcode.run sc
   | _ -> raise (Error "eval: invalid args")
 ;;

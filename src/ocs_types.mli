@@ -54,7 +54,7 @@ type sval =
   | Sproc of sproc
 
   (* Delayed expression.  *)
-  | Spromise of ((sval -> unit) -> unit)
+  | Spromise of (unit -> sval)
 
   (* A set of values returned by the 'values' primitive,
      deconstructed into multiple parameters by call-with-values.  *)
@@ -81,7 +81,7 @@ and spair =
 
 and _ ret =
     Rval : sval ret
-  | Rcont : (thread -> (sval -> unit) -> unit) ret
+  | Rcont : (thread -> sval) ret
 
   (* Primitive signature.  *)
 and _ sg =

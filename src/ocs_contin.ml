@@ -2,7 +2,6 @@
 
 open Ocs_types
 open Ocs_error
-open Ocs_prim
 open Ocs_stage
 open Ocs_env
 open Ocs_misc
@@ -51,17 +50,30 @@ let rec find_depth fdx tdx al bl =
 (*   | av -> dxswitch th.th_dynext dx (fun () -> cc (Svalues av)) *)
 (* ;; *)
 
-let call_cc proc th cc =
-  let cont =
-    let continuation al _ _ =
+let main_prompt =
+  Delimcc.new_prompt ()
+;;
+
+(* [call/cc] in terms of [delimcc]:
+
+   (define (call/cc f) (control (lambda (k) (k (f (lambda (v) (abort (k v))))))))
+
+   See "Control Delimiters and their Hierarchies", p. 75, Sitaram, Felleisen, 1990. *)
+
+let call_cc proc th =
+  let cont cc =
+    let continuation al _ =
       match al with
-        [ x ] -> cc x
-      | _ -> cc (Svalues al)
+        x :: [] ->
+          Delimcc.abort main_prompt (cc x)
+      | _ ->
+          Delimcc.abort main_prompt (cc (Svalues al))
     in
       Sproc { proc_name = "<continuation>";
               proc_fun = Pf (Prest Rcont, continuation) }
   in
-    doapply th cc proc [ cont ]
+    Delimcc.control main_prompt
+      (fun cc -> cc (doapply th proc [ cont cc ]))
 ;;
 
 let values =
@@ -70,13 +82,12 @@ let values =
   | av -> Svalues av
 ;;
 
-let call_values producer consumer th cc =
-  doapply th (function
-        Svalues av ->
-          doapply th cc consumer av
-      | x ->
-          doapply th cc consumer [x])
-    producer []
+let call_values producer consumer th =
+  match doapply th producer [] with
+    Svalues av ->
+      doapply th consumer av
+  | x ->
+      doapply th consumer [x]
 ;;
 
 (* let dynamic_wind th cc = *)
