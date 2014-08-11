@@ -54,7 +54,7 @@ type sval =
   | Sproc of sproc
 
   (* Delayed expression.  *)
-  | Spromise of (unit -> sval)
+  | Spromise of sval Lazy.t
 
   (* A set of values returned by the 'values' primitive,
      deconstructed into multiple parameters by call-with-values.  *)

@@ -329,22 +329,7 @@ let rec stage e th =
                loop m
            end >.
   | Cdelay c ->
-      .< let p = let r = ref None in fun () ->
-           match !r with
-             None ->
-               (* TODO check if `th` should be somehow freed after forcing the promise . *)
-               begin
-                 let v = .~(stage e th c) in
-                   match !r with
-                     None ->
-                       (r := Some v; v)
-                   | Some v ->
-                       v
-               end
-           | Some v ->
-               v
-         in
-           Spromise p >.
+      .< Spromise (lazy .~(stage e th c)) >.
   | _ ->
       raise (Error "stage: internal error")
 ;;

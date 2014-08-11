@@ -109,7 +109,7 @@ let do_apply f av th =
 let force p _ =
   match p with
     Spromise p ->
-      p ()
+      Lazy.force p
   | _ ->
       p (* if not a promise, we just return the argument *)
 ;;
