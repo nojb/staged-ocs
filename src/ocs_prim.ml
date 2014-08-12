@@ -140,16 +140,16 @@ let let_param p x f =
 
 let rec proc_has_rest : type a. a sg -> bool = function
     Pfix sg -> proc_has_rest sg
-  | Prest _ -> true
-  | Pret _ -> false
-  | Pvoid _ -> false
+  | Prest -> true
+  | Pret -> false
+  | Pvoid -> false
 ;;
 
 let rec proc_nargs : type a. a sg -> int = function
     Pfix sg -> 1 + proc_nargs sg
-  | Pret _ -> 0
-  | Prest _ -> 1
-  | Pvoid _ -> 0
+  | Pret -> 0
+  | Prest -> 1
+  | Pvoid -> 0
 ;;
 
 let args_err sg proc_name n =
@@ -161,28 +161,21 @@ let args_err sg proc_name n =
       proc_name (proc_nargs sg) n
 ;;
 
-let rec apply th p av =
+let rec apply p av =
   match p with
     Sprim p
   | Sproc p ->
       let Pf (sg, f) = p.proc_fun in 
-      let ret : type a. a ret -> a -> sval = fun r f ->
-        match r with
-          Rval ->
-            f
-        | Rcont ->
-            f th
-      in
       let rec loop : type a. a sg -> a -> _ -> sval = fun sg f al ->
         match sg, al with
           Pfix sg, a :: al ->
             loop sg (f a) al
-        | Prest r, _ ->
-            ret r (f al)
-        | Pret r, [] ->
-            ret r f
-        | Pvoid r, [] ->
-            ret r (f ())
+        | Prest, _ ->
+            f al
+        | Pret, [] ->
+            f
+        | Pvoid, [] ->
+            f ()
         | _ ->
             raise (Error (args_err sg p.proc_name (List.length av)))
       in
@@ -199,27 +192,27 @@ let rec apply th p av =
       raise (Error "apply: not a procedure or primitive")
 ;;
 
-let do_apply f av th =
+let do_apply f av =
   let rec loop = function
       [] -> raise (Error "apply: bad args")
     | [a] -> list_to_caml a
     | a :: av -> a :: loop av
   in
   let args = loop av in
-    apply th f args
+    apply f args
 ;;
 
-let make_parameter args th =
+let make_parameter args =
   match args with
     init :: [] ->      
       new_param init (fun x -> x)
   | init :: converter :: [] ->
-      new_param init (fun x -> apply th converter [ x ])
+      new_param init (fun x -> apply converter [ x ])
   | _ ->
       raise (Error "make-parameter: bad args")
 ;;
 
-let force p _ =
+let force p =
   match p with
     Spromise p ->
       Lazy.force p
@@ -227,7 +220,7 @@ let force p _ =
       p (* if not a promise, we just return the argument *)
 ;;
 
-let map_for_each av th is_map =
+let map_for_each av is_map =
   let my_name = if is_map then "map" else "for-each" in
     match av with
       [] | _ :: [] ->
@@ -262,7 +255,7 @@ let map_for_each av th is_map =
           match args with
             Snull :: _ -> !result
           | Spair _ :: _ ->
-              let v = apply th proc (List.map get_carc args) in
+              let v = apply proc (List.map get_carc args) in
                 if is_map then append v;
                 loop (List.map get_cdr args)
           | _ -> raise (Error (my_name ^ ": invalid argument lists"))
@@ -270,12 +263,12 @@ let map_for_each av th is_map =
           loop args
 ;;
 
-let map av th =
-  map_for_each av th true
+let map av =
+  map_for_each av true
 ;;
 
-let for_each av th =
-  map_for_each av th false
+let for_each av =
+  map_for_each av false
 ;;
 
 let report_env e _ =
@@ -312,14 +305,14 @@ let init e =
   set_pf2 e is_eqv "eqv?";
   set_pf2 e is_equal "equal?";
 
-  set_pfg e (Pfix (Prest Rcont)) do_apply "apply";
+  set_pfg e (Pfix Prest) do_apply "apply";
 
-  set_pfg e (Prest Rcont) make_parameter "make-parameter";
+  set_pfn e make_parameter "make-parameter";
 
-  set_pfg e (Pfix (Pret Rcont)) force "force";
+  set_pf1 e force "force";
 
-  set_pfg e (Prest Rcont) map "map";
-  set_pfg e (Prest Rcont) for_each "for-each";
+  set_pfn e map "map";
+  set_pfn e for_each "for-each";
 
   set_pf1 e (report_env (env_copy e)) "scheme-report-environment";
   set_pf1 e null_env "null-environment";

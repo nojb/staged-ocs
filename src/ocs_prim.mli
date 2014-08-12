@@ -3,7 +3,7 @@
 open Ocs_types
 
 val args_err : _ sg -> string -> int -> string
-val apply : thread -> sval -> sval list -> sval
+val apply : sval -> sval list -> sval
 
 val new_param : sval -> (sval -> sval) -> sval
 val get_param : sval -> sval

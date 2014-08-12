@@ -2,8 +2,8 @@
 
 open Ocs_types
 
-val stage : thread code -> scode -> sval code
+val stage : scode -> sval code
 
-val load_file : env -> thread -> string -> unit
+val load_file : env -> string -> unit
 
 val init : env -> unit

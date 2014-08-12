@@ -32,7 +32,6 @@ Known deviations from R5RS:
 - `transcript-on` and `transcript-off` are currently not implemented
 - `scheme-report-environment` and `null-environment` ignore their
    argument
-- `dynamic-wind` is not currently supported
 
 Anything else that does not work as specified in R5RS is a bug.
 
@@ -131,13 +130,7 @@ language bindings can be created using
 
 Staging is done by
 
-    Ocs_eval.stage : thread code -> scode -> sval code
-
-The `thread` type is used at run-time to store the current dynamic extent (for
-`dynamic-wind`, currently not implemented).  It does not represent a thread in
-the concurrent sense, but rather the evaluation state, and is copied and changed
-rather than modified in place.  The initial thread can be created using
-`Ocs_top.make_thread : unit -> thread`.
+    Ocs_eval.stage : scode -> sval code
 
 ## Continuations and I/O
 
