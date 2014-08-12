@@ -27,5 +27,3 @@ val set_pf1 : env -> (sval -> sval) -> string -> unit
 val set_pf2 : env -> (sval -> sval -> sval) -> string -> unit
 val set_pf3 : env -> (sval -> sval -> sval -> sval) -> string -> unit
 val set_pfn : env -> (sval list -> sval) -> string -> unit
-val set_pfcn :
-  env -> (thread -> sval list -> sval) -> string -> unit

@@ -89,16 +89,12 @@ and sparam =
     p_conv : sval -> sval
   }
 
-and _ ret =
-    Rval : sval ret
-  | Rcont : (thread -> sval) ret
-
   (* Primitive signature.  *)
 and _ sg =
     Pfix : 'b sg -> (sval -> 'b) sg
-  | Prest : 'b ret -> (sval list -> 'b) sg
-  | Pret : 'a ret -> 'a sg
-  | Pvoid : 'a ret -> (unit -> 'a) sg
+  | Prest : (sval list -> sval) sg
+  | Pret : sval sg
+  | Pvoid : (unit -> sval) sg
 
   (* Procedure structure.  *)
 and sproc =
@@ -150,10 +146,6 @@ and gvar =
     mutable g_val : sval
   }
 
-  (* Thread state, used during evaluation.  *)
-and thread =
-  dynext option             (* Current dynamic extent.  *)
-
   (* Local variable slot. *)
 and vloc =
   {
@@ -177,13 +169,3 @@ and env =
     env_frame_size : int ref;
     mutable env_tagged : (env * sval * vbind) list
   }
-
-  (* Dynamic extents are associated with threads and continuations.  *)
-and dynext =
-  {
-    dynext_parent : dynext option;
-    dynext_depth : int;
-    dynext_before : thread * ((sval -> unit) -> unit);
-    dynext_after : thread * ((sval -> unit) -> unit)
-  }
-

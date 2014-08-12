@@ -43,7 +43,7 @@ type 'b slambda_c =
     cc : 'a. 'a sg -> 'b
   }
 
-let rec stage e th =
+let rec stage e =
   function
     Cval v -> .< v >.
   | Cseq s ->
@@ -52,9 +52,9 @@ let rec stage e th =
           [] ->
             .< Sunspec >.
         | s :: [] ->
-            stage e th s
+            stage e s
         | s :: sl ->
-            .< let _ = .~(stage e th s) in .~(loop sl) >.
+            .< let _ = .~(stage e s) in .~(loop sl) >.
       in
         loop s
   | Cand s ->
@@ -62,9 +62,9 @@ let rec stage e th =
         function
           [] -> .< Strue >.
         | s :: [] ->
-            stage e th s
+            stage e s
         | s :: sl ->
-            .< match .~(stage e th s) with
+            .< match .~(stage e s) with
                  Sfalse -> Sfalse
                | _ -> .~(loop sl) >.
       in
@@ -74,27 +74,27 @@ let rec stage e th =
         function
           [] -> .< Sfalse >.
         | s :: [] ->
-            stage e th s
+            stage e s
         | s :: sl ->
-            .< match .~(stage e th s) with
+            .< match .~(stage e s) with
                  Sfalse -> .~(loop sl)
                | _ as x -> x >.
       in
         loop s
   | Cif (c, tx, fx) ->
-      .< match .~(stage e th c) with
-           Sfalse -> .~(stage e th fx)
-         | _ -> .~(stage e th tx) >.
+      .< match .~(stage e c) with
+           Sfalse -> .~(stage e fx)
+         | _ -> .~(stage e tx) >.
   | Csetg (g, c) ->
       let err = "set!: unbound variable " ^ (sym_name g.g_sym) in
         .< if g.g_val == Sunbound then
              raise (Error err)
            else
-             let () = g.g_val <- .~(stage e th c) in Sunspec >.
+             let () = g.g_val <- .~(stage e c) in Sunspec >.
   | Csetl (i, c) ->
-      .< let () = .~(setl e i (stage e th c)) in Sunspec >.
+      .< let () = .~(setl e i (stage e c)) in Sunspec >.
   | Cdefine (g, c) ->
-      .< let () = g.g_val <- .~(stage e th c) in Sunspec >.
+      .< let () = g.g_val <- .~(stage e c) in Sunspec >.
   | Cgetg g ->
       let err = "unbound variable: " ^ (sym_name g.g_sym) in
         .< if g.g_val == Sunbound then
@@ -106,28 +106,21 @@ let rec stage e th =
   | Capply (Cval (Sprim p), av) ->
       begin
         let Pf (sg, f) = p.proc_fun in
-        let ret : type a. a ret -> a code -> sval code = fun r f ->
-          match r with
-            Rval ->
-              f
-          | Rcont ->
-              .< .~f .~th >.
-        in
         let rec loop : type a. a sg -> a code -> _ -> sval code = fun sg f al ->
           match sg, al with
             Pfix sg, a :: al ->
-              loop sg .< .~f .~(stage e th a) >. al
-          | Prest r, _ ->
+              loop sg .< .~f .~(stage e a) >. al
+          | Prest, _ ->
               let rec mkrest cc = function
                   [] -> cc .< [] >.
                 | a :: al ->
-                    mkrest (fun al -> cc .< .~(stage e th a) :: .~al >.) al
+                    mkrest (fun al -> cc .< .~(stage e a) :: .~al >.) al
               in
-                mkrest (fun al -> ret r .< .~f .~al >.) al
-          | Pret r, [] ->
-              ret r f
-          | Pvoid r, [] ->
-              ret r .< .~f () >.
+                mkrest (fun al -> .< .~f .~al >.) al
+          | Pret, [] ->
+              f
+          | Pvoid, [] ->
+              .< .~f () >.
           | _ ->
               raise (Error (args_err sg p.proc_name (List.length av)))
         in
@@ -138,30 +131,30 @@ let rec stage e th =
       let rec loop e args vals =
         match args, vals with
           [], [] ->
-            stage e th l.lam_body
+            stage e l.lam_body
         | [a], _ when l.lam_has_rest ->
             let rec mkrest cc = function
                 [] -> cc .< Snull >.
               | v :: vals ->
-                  mkrest (fun vals -> cc .< Spair { car = .~(stage e0 th v); cdr = .~vals } >.) vals
+                  mkrest (fun vals -> cc .< Spair { car = .~(stage e0 v); cdr = .~vals } >.) vals
             in
               mkrest (fun rest -> bind e a rest (fun e -> loop e [] [])) vals
         | a :: args, v :: vals ->
-            bind e a (stage e0 th v) (fun e -> loop e args vals)
+            bind e a (stage e0 v) (fun e -> loop e args vals)
         | _ ->
             raise (Error "apply: wrong number of arguments")
       in
         loop e l.lam_args a
   | Capply (c, a) ->
-      .< let f = .~(stage e th c) in
+      .< let f = .~(stage e c) in
            .~begin
              let rec loop cc = function
                  [] -> cc .< [] >.
                | a :: al ->
-                   loop (fun al -> cc .< .~(stage e th a) :: .~al >.) al
+                   loop (fun al -> cc .< .~(stage e a) :: .~al >.) al
              in
                loop
-                 (fun al -> .< apply .~th f .~al >.)
+                 (fun al -> .< apply f .~al >.)
                  a
            end >.
   | Clambda { lam_has_rest = hr; lam_body = body; lam_args = args; lam_name = n } ->
@@ -178,11 +171,10 @@ let rec stage e th =
           b :: largs, Pfix sg ->
             .< fun x ->
                .~(bind e b .< x >. (fun e -> mkargs e largs sg)) >.
-        | [], Pret Rcont ->
-            .< fun th ->
-               .~(stage e .< th >. body) >.
-        | a :: [], Prest Rcont ->
-            .< fun x th ->
+        | [], Pret ->
+            stage e body
+        | a :: [], Prest ->
+            .< fun x ->
                .~(bind e a .< list_of_caml x >.
                     (fun e -> stage e body)) >.
         | [], Pvoid ->
@@ -208,9 +200,9 @@ let rec stage e th =
               in
                 loop usl
             in
-              .< findtl .~(stage e th x) .~(stage e th t) >.
+              .< findtl .~(stage e x) .~(stage e t) >.
         | _ ->
-            .< Spair { car = .~(stage e th h); cdr = .~(stage e th t) } >.
+            .< Spair { car = .~(stage e h); cdr = .~(stage e t) } >.
       end
   | Cqqv v ->
       let n = List.length v in
@@ -221,7 +213,7 @@ let rec stage e th =
                    [] ->
                      .< Svector qv >.
                  | v :: vl ->
-                     .< let () = qv.(i) <- .~(stage e th v) in .~(loop (i+1) vl) >.
+                     .< let () = qv.(i) <- .~(stage e v) in .~(loop (i+1) vl) >.
                in
                  loop 0 v
              end >.
@@ -232,9 +224,9 @@ let rec stage e th =
             [] ->
               .< Svector (Array.of_list .~r) >.
           | (Cqqspl x)::t ->
-              loop .< (list_to_caml .~(stage e th x)) @ .~r >. t
+              loop .< (list_to_caml .~(stage e x)) @ .~r >. t
           | h::t ->
-              loop .< .~(stage e th h) :: .~r >. t
+              loop .< .~(stage e h) :: .~r >. t
         in
           loop .< [] >. (List.rev l)
       end
@@ -246,28 +238,28 @@ let rec stage e th =
           [] ->
             .< Sunspec >.
         | (Ccondspec c, b) :: al ->
-            .< match .~(stage e th c) with
+            .< match .~(stage e c) with
                  Sfalse ->
                    .~(loop al)
                | _ as v ->
-                   apply .~th .~(stage e th b) [ v ] >.
+                   apply .~(stage e b) [ v ] >.
         | (c, b) :: al ->
-            .< match .~(stage e th c) with
+            .< match .~(stage e c) with
                  Sfalse ->
                    .~(loop al)
                | _ ->
-                   .~(stage e th b) >.
+                   .~(stage e b) >.
       in
         loop av
   | Ccase (c, m) ->
-      .< let v = .~(stage e th c) in
+      .< let v = .~(stage e c) in
            .~begin
              let rec loop =
                function
                  [] ->
                    .< Sunspec >.
                | ([], b) :: _ ->
-                   stage e th b
+                   stage e b
                | (mv, b) :: ml ->
                    let rec has =
                      function
@@ -279,23 +271,23 @@ let rec stage e th =
                          .< mvv == v || test_eqv mvv v || .~(has mvvl) >.
                    in
                      .< if .~(has mv) then
-                          .~(stage e th b)
+                          .~(stage e b)
                         else
                           .~(loop ml) >.
              in
                loop m
            end >.
   | Cdelay c ->
-      .< Spromise (lazy .~(stage e th c)) >.
+      .< Spromise (lazy .~(stage e c)) >.
   | Cparam (ps, c) ->
       let rec loop =
         function
           [] ->
-            stage e th c
+            stage e c
         | (p, v) :: ps ->
-            .< match .~(stage e th p) with
+            .< match .~(stage e p) with
                  Sparam _ as p ->
-                   let_param p .~(stage e th v) (fun () -> .~(loop ps))
+                   let_param p .~(stage e v) (fun () -> .~(loop ps))
                | _ ->
                    raise (Error "parametrize: bad args") >.
       in
@@ -304,11 +296,11 @@ let rec stage e th =
       raise (Error "stage: internal error")
 ;;
 
-let stage th c =
-  stage [] th c
+let stage c =
+  stage [] c
 ;;
 
-let load_file e th name =
+let load_file e name =
   let inp = Ocs_port.open_input_port name in
   let lex = Ocs_lex.make_lexer inp name in
   let rec loop () =
@@ -316,29 +308,29 @@ let load_file e th name =
       Seof -> ()
     | v ->
         let c = compile e v in
-        let sc = stage .< th >. c in
+        let sc = stage c in
         let _ = Delimcc.push_prompt Ocs_contin.main_prompt (fun () -> Runcode.run sc) in
           loop ()
   in
     loop ()
 ;;
 
-let load_prim e a th =
+let load_prim e a =
   match a with
-    Sstring name -> load_file e th name; Sunspec
+    Sstring name -> load_file e name; Sunspec
   | _ -> raise (Error "load: invalid name argument")
 ;;
 
-let eval_prim expr e th =
+let eval_prim expr e =
   match e with
     Sesym (e, _) ->
       let c = compile e expr in
-      let sc = stage .< th >. c in
+      let sc = stage c in
         Runcode.run sc
   | _ -> raise (Error "eval: invalid args")
 ;;
 
 let init e =
-  set_pfg e (Pfix (Pret Rcont)) (load_prim e) "load";
-  set_pfg e (Pfix (Pfix (Pret Rcont))) eval_prim "eval";
+  set_pf1 e (load_prim e) "load";
+  set_pf2 e eval_prim "eval";
 ;;

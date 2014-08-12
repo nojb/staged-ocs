@@ -6,6 +6,17 @@ open Ocs_prim
 open Ocs_env
 open Ocs_misc
 
+  (* Dynamic extents are associated with threads and continuations.  *)
+type dynext =
+  {
+    dynext_parent : dynext option;
+    dynext_depth : int;
+    dynext_before : unit -> sval;
+    dynext_after : unit -> sval
+  }
+
+let winders : dynext option ref = ref None
+
 let rec find_depth fdx tdx al bl =
   match (fdx, tdx) with
     (Some f, Some t) ->
@@ -26,32 +37,34 @@ let rec find_depth fdx tdx al bl =
 ;;
 
 (* Change from the dynamic extent fdx to the dynamic extent tdx *)
-(* let dxswitch fdx tdx cont = *)
-(*   if fdx == tdx then *)
-(*     cont () *)
-(*   else *)
-(*     let (al, bl) = find_depth fdx tdx [] [] in *)
-(*     let rec bloop = *)
-(*       function *)
-(*         [] -> cont () *)
-(*       | h::t -> eval (fst h) (fun _ -> bloop t) (snd h) *)
-(*     in *)
-(*       let rec aloop = *)
-(*         function *)
-(*           [] -> bloop bl *)
-(*         | h::t -> eval (fst h) (fun _ -> aloop t) (snd h) *)
-(*       in *)
-(*         aloop al *)
-(* ;; *)
-
-(* let continuation dx cc th _ = *)
-(*   function *)
-(*     [| x |] -> dxswitch th.th_dynext dx (fun () -> cc x) *)
-(*   | av -> dxswitch th.th_dynext dx (fun () -> cc (Svalues av)) *)
-(* ;; *)
+let dxswitch fdx tdx =
+  if not (fdx == tdx) then
+    let (al, bl) = find_depth fdx tdx [] [] in
+    let rec bloop =
+      function
+        [] -> ()
+      | h::t -> let _ = h () in bloop t
+    in
+    let rec aloop =
+      function
+        [] -> bloop bl
+      | h::t -> let _ = h () in aloop t
+    in
+      aloop al
+;;
 
 let main_prompt =
   Delimcc.new_prompt ()
+;;
+
+let continuation dx cc =
+  function
+    [ x ] ->
+      let () = dxswitch !winders dx in
+        Delimcc.abort main_prompt (cc x)
+  | av ->
+      let () = dxswitch !winders dx in
+        Delimcc.abort main_prompt (cc (Svalues av))
 ;;
 
 (* [call/cc] in terms of [delimcc]:
@@ -60,20 +73,13 @@ let main_prompt =
 
    See "Control Delimiters and their Hierarchies", p. 75, Sitaram, Felleisen, 1990. *)
 
-let call_cc proc th =
+let call_cc proc =
   let cont cc =
-    let continuation al _ =
-      match al with
-        x :: [] ->
-          Delimcc.abort main_prompt (cc x)
-      | _ ->
-          Delimcc.abort main_prompt (cc (Svalues al))
-    in
-      Sproc { proc_name = "<continuation>";
-              proc_fun = Pf (Prest Rcont, continuation) }
+    Sproc { proc_name = "<continuation>";
+            proc_fun = Pf (Prest, continuation !winders cc) }
   in
     Delimcc.control main_prompt
-      (fun cc -> cc (apply th proc [ cont cc ]))
+      (fun cc -> cc (apply proc [ cont cc ]))
 ;;
 
 let values =
@@ -82,43 +88,40 @@ let values =
   | av -> Svalues av
 ;;
 
-let call_values producer consumer th =
-  match apply th producer [] with
+let call_values producer consumer =
+  match apply producer [] with
     Svalues av ->
-      apply th consumer av
+      apply consumer av
   | x ->
-      apply th consumer [x]
+      apply consumer [x]
 ;;
 
-(* let dynamic_wind th cc = *)
-(*   function *)
-(*     [| before; thunk; after |] -> *)
-(*       let before = Capply0 (Cval before) *)
-(*       and after = Capply0 (Cval after) in *)
-(*       let ndx = { *)
-(*         dynext_parent = th.th_dynext; *)
-(*         dynext_depth = *)
-(*           (match th.th_dynext with *)
-(*             None -> 0 *)
-(*           | Some dx -> dx.dynext_depth + 1); *)
-(*         dynext_before = (th, before); *)
-(*         dynext_after = (th, after) *)
-(*       } in *)
-(*         eval th *)
-(*           (fun _ -> *)
-(*             eval { th with th_dynext = Some ndx } *)
-(*               (fun r -> *)
-(*                 eval th (fun _ -> cc r) after) (Capply0 (Cval thunk))) before *)
-(*   | _ -> raise (Error "dynamic-wind: bad args") *)
-(* ;; *)
+let dynamic_wind before thunk after =
+  let _ = apply before [] in
+  let oldw = !winders in
+  let ndx = {
+    dynext_parent = oldw;
+    dynext_depth =
+      (match oldw with
+         None -> 0
+       | Some dx -> dx.dynext_depth + 1);
+    dynext_before = (fun () -> apply before []);
+    dynext_after = (fun () -> apply after [])
+  } in
+  winders := Some ndx;
+  let res = apply thunk [] in
+    winders := oldw;
+    let _ = apply after [] in
+      res
+;;
 
 let init e =
-  set_pfg e (Pfix (Pret Rcont)) call_cc "call-with-current-continuation";
-  set_pfg e (Pfix (Pret Rcont)) call_cc "call/cc";
+  set_pf1 e call_cc "call-with-current-continuation";
+  set_pf1 e call_cc "call/cc";
 
   set_pfn e values "values";
 
-  set_pfg e (Pfix (Pfix (Pret Rcont))) call_values "call-with-values";
-  (* set_pfcn e dynamic_wind "dynamic-wind"; *)
+  set_pf2 e call_values "call-with-values";
+  set_pf3 e dynamic_wind "dynamic-wind";
 ;;
 

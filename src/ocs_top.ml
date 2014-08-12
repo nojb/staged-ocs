@@ -30,18 +30,13 @@ let make_env () =
     e
 ;;
 
-(* Create a top-level thread.  *)
-let make_thread () =
-  None
-;;
-
 let get_port =
   function
     Sport p -> p
   | _ -> failwith "expected port"
 ;;
 
-let top_loop env th =
+let top_loop env =
   let inp = get_stdin ()
   and outp = get_stdout ()
   and errp = Ocs_port.output_port stderr in
@@ -54,7 +49,7 @@ let top_loop env th =
           Seof -> ()
         | v ->
             let c = compile env v in
-            let cv = stage .< th >. c in
+            let cv = stage c in
               if !dstaged then
                 begin
                   Print_code.print_code Format.str_formatter cv;
@@ -82,6 +77,6 @@ let top_loop env th =
 
 (* Simple interface to invoke the interactive Scheme environment.  *)
 let interactive () =
-  top_loop (make_env ()) (make_thread ())
+  top_loop (make_env ())
 ;;
 

@@ -154,33 +154,33 @@ let scm_close_port p =
    for this because closing and reopening the file would be an even
    bigger problem.  *)
 
-let call_w_in name proc th =
+let call_w_in name proc =
   let p = open_input_file name in
-  let x = apply th proc [p] in
+  let x = apply proc [p] in
     close_port p;
     x
 ;;
 
-let call_w_out name proc th =
+let call_w_out name proc =
   let p = open_output_file name in
-  let x = apply th proc [p] in
+  let x = apply proc [p] in
     close_port p;
     x
 ;;
 
-let w_in name thunk th =
+let w_in name thunk =
   let p = open_input_file name in
     let_param current_input_port p
       (fun () ->
-         let x = apply th thunk [] in
+         let x = apply thunk [] in
            close_port p; x)
 ;;
 
-let w_out name thunk th =
+let w_out name thunk =
   let p = open_output_file name in
     let_param current_output_port p
       (fun () ->
-         let x = apply th thunk [] in
+         let x = apply thunk [] in
            close_port p; x)
 ;;
 
@@ -209,9 +209,9 @@ let init e =
   set_pf1 e scm_close_port "close-input-port";
   set_pf1 e scm_close_port "close-output-port";
 
-  set_pfg e (Pfix (Pfix (Pret Rcont))) call_w_in "call-with-input-file";
-  set_pfg e (Pfix (Pfix (Pret Rcont))) call_w_out "call-with-output-file";
+  set_pf2 e call_w_in "call-with-input-file";
+  set_pf2 e call_w_out "call-with-output-file";
 
-  set_pfg e (Pfix (Pfix (Pret Rcont))) w_in "with-input-from-file";
-  set_pfg e (Pfix (Pfix (Pret Rcont))) w_out "with-output-to-file";
+  set_pf2 e w_in "with-input-from-file";
+  set_pf2 e w_out "with-output-to-file";
 ;;

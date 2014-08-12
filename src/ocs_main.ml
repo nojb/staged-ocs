@@ -14,10 +14,9 @@ let main () =
     if !loadf = [] then
       Ocs_top.interactive ()
     else
-      let e = Ocs_top.make_env ()
-      and th = Ocs_top.make_thread () in
+      let e = Ocs_top.make_env () in
         try
-          List.iter (fun x -> Ocs_stage.load_file e th x) !loadf
+          List.iter (fun x -> Ocs_stage.load_file e x) !loadf
         with
           Error err ->
             Printf.eprintf "Error: %s\n" err
